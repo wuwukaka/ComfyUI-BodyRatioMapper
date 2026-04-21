@@ -1,0 +1,15 @@
+[project]
+name = "ComfyUI-BodyRatioMapper"
+description = "SDPose-based pose alignment and body proportion mapping for ComfyUI"
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["torch", "numpy", "opencv-python", "matplotlib"]
+
+[project.urls]
+Repository = "https://github.com/wuwukaka/ComfyUI-BodyRatioMapper.git"
+# Some code is derived from grmchn/ComfyUI-ProportionChanger
+
+[tool.comfy]
+PublisherId = "wuwukaka"
+DisplayName = "ComfyUI-BodyRatioMapper"
+Icon = ""
