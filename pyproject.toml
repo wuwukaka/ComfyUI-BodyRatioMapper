@@ -1,6 +1,6 @@
 [project]
 name = "ComfyUI-BodyRatioMapper"
-description = "SDPose-based pose alignment and body proportion mapping for ComfyUI"
+description = "A project for pose alignment and human body proportion mapping based on SDPose"
 version = "1.0.0"
 license = {file = "LICENSE"}
 dependencies = ["torch", "numpy", "opencv-python", "matplotlib"]
