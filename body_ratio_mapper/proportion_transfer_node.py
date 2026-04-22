@@ -924,25 +924,10 @@ class BodyRatioMapperProportionTransfer:
             confidence_threshold=confidence_threshold,
             output_absolute_coordinates=output_absolute_coordinates,
         )
-        alignment_mode = runtime_cfg.alignment_mode
-        hand_scaling = runtime_cfg.hand_scaling
-        foot_scaling = runtime_cfg.foot_scaling
-        offset_stabilizer = runtime_cfg.offset_stabilizer
-        offset_stabilizer_x = runtime_cfg.offset_stabilizer_x
-        best_hand_search = runtime_cfg.best_hand_search
-        use_shoulder_fk_for_hand = runtime_cfg.use_shoulder_fk_for_hand
-        best_neck_search = runtime_cfg.best_neck_search
-        final_offset_alignment = runtime_cfg.final_offset_alignment
-        first_frame_offset_alignment = runtime_cfg.first_frame_offset_alignment
-        anchor_output_mode = runtime_cfg.anchor_output_mode
-        print_detailed_logs = runtime_cfg.print_detailed_logs
-        confidence_threshold = runtime_cfg.confidence_threshold
-        output_absolute_coordinates = runtime_cfg.output_absolute_coordinates
-
         self._assert_single_frame_input("ref_pose_keypoint", ref_pose_keypoint)
         self._assert_single_frame_input("manual_anchor_pose", manual_anchor_pose)
-        if anchor_output_mode not in ("single_frame_multi_person", "multi_frame_single_person"):
-            raise ValueError(f"Invalid anchor_output_mode: {anchor_output_mode}")
+        if runtime_cfg.anchor_output_mode not in ("single_frame_multi_person", "multi_frame_single_person"):
+            raise ValueError(f"Invalid anchor_output_mode: {runtime_cfg.anchor_output_mode}")
         if ref_pose_keypoint is None or len(ref_pose_keypoint) == 0:
             max_people = 0
             for frame in pose_keypoint:
@@ -954,32 +939,21 @@ class BodyRatioMapperProportionTransfer:
                     pose_keypoint=pose_keypoint,
                     ref_pose_keypoint=ref_pose_keypoint,
                     manual_anchor_pose=manual_anchor_pose,
-                    alignment_mode=alignment_mode,
-                    hand_scaling=hand_scaling,
-                    foot_scaling=foot_scaling,
-                    offset_stabilizer=offset_stabilizer,
-                    offset_stabilizer_x=offset_stabilizer_x,
-                    best_hand_search=best_hand_search,
-                    use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
-                    best_neck_search=best_neck_search,
-                    final_offset_alignment=final_offset_alignment,
-                    first_frame_offset_alignment=first_frame_offset_alignment,
-                    confidence_threshold=confidence_threshold,
-                    output_absolute_coordinates=output_absolute_coordinates,
+                    config=runtime_cfg,
                 )
             self._log_multi_summary(
                 "no_ref_passthrough",
                 input_frames=len(pose_keypoint),
                 input_max_people=max_people,
-                anchor_output_mode=anchor_output_mode,
+                anchor_output_mode=runtime_cfg.anchor_output_mode,
             )
             return self._passthrough_without_ref(
                 pose_keypoint=pose_keypoint,
-                anchor_output_mode=anchor_output_mode,
-                conf_thresh=float(confidence_threshold),
+                anchor_output_mode=runtime_cfg.anchor_output_mode,
+                conf_thresh=float(runtime_cfg.confidence_threshold),
             )
 
-        conf_thresh = float(confidence_threshold)
+        conf_thresh = float(runtime_cfg.confidence_threshold)
         ref_frame = ref_pose_keypoint[0]
         ref_people = ref_frame.get("people", [])
         ref_people_filtered = []
@@ -1092,23 +1066,12 @@ class BodyRatioMapperProportionTransfer:
                 }]
 
             # Multi-person mode keeps single-person verbose logs muted by default.
-            if print_detailed_logs:
+            if runtime_cfg.print_detailed_logs:
                 changed_i, anchor_i = self._process_single(
                     pose_keypoint=candidate_tracks[i],
                     ref_pose_keypoint=[ref_single_frame],
                     manual_anchor_pose=manual_single,
-                    alignment_mode=alignment_mode,
-                    hand_scaling=hand_scaling,
-                    foot_scaling=foot_scaling,
-                    offset_stabilizer=offset_stabilizer,
-                    offset_stabilizer_x=offset_stabilizer_x,
-                    best_hand_search=best_hand_search,
-                    use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
-                    best_neck_search=best_neck_search,
-                    final_offset_alignment=final_offset_alignment,
-                    first_frame_offset_alignment=first_frame_offset_alignment,
-                    confidence_threshold=confidence_threshold,
-                    output_absolute_coordinates=output_absolute_coordinates,
+                    config=runtime_cfg,
                 )
             else:
                 with contextlib.redirect_stdout(io.StringIO()):
@@ -1116,18 +1079,7 @@ class BodyRatioMapperProportionTransfer:
                         pose_keypoint=candidate_tracks[i],
                         ref_pose_keypoint=[ref_single_frame],
                         manual_anchor_pose=manual_single,
-                        alignment_mode=alignment_mode,
-                        hand_scaling=hand_scaling,
-                        foot_scaling=foot_scaling,
-                        offset_stabilizer=offset_stabilizer,
-                        offset_stabilizer_x=offset_stabilizer_x,
-                        best_hand_search=best_hand_search,
-                        use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
-                        best_neck_search=best_neck_search,
-                        final_offset_alignment=final_offset_alignment,
-                        first_frame_offset_alignment=first_frame_offset_alignment,
-                        confidence_threshold=confidence_threshold,
-                        output_absolute_coordinates=output_absolute_coordinates,
+                        config=runtime_cfg,
                     )
             changed_tracks.append(changed_i)
             if anchor_i and len(anchor_i) > 0:
@@ -1140,19 +1092,19 @@ class BodyRatioMapperProportionTransfer:
                 anchor_people.append(self._build_zero_person_openpose())
 
         changed_output = self._merge_changed_tracks_to_multi_frames(changed_tracks, pose_keypoint)
-        anchor_output = self._build_anchor_output(anchor_people, ref_frame, anchor_output_mode)
-        self._validate_anchor_output_shape(anchor_output, n_ref, anchor_output_mode)
+        anchor_output = self._build_anchor_output(anchor_people, ref_frame, runtime_cfg.anchor_output_mode)
+        self._validate_anchor_output_shape(anchor_output, n_ref, runtime_cfg.anchor_output_mode)
         self._log_multi_summary(
             "done",
             changed_frames=len(changed_output),
             changed_people_per_frame=(len(changed_output[0].get("people", [])) if len(changed_output) > 0 else 0),
             anchor_frames=len(anchor_output),
-            anchor_mode=anchor_output_mode,
+            anchor_mode=runtime_cfg.anchor_output_mode,
             n_ref=n_ref,
         )
         return (changed_output, anchor_output)
 
-    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True):
+    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, config=None):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint) # Return tuple for both outputs
         
@@ -1186,6 +1138,7 @@ class BodyRatioMapperProportionTransfer:
                 manual_ref_data = manual_batch[0]
 
         runtime_config = self._resolve_runtime_config(
+            config=config,
             alignment_mode=alignment_mode,
             hand_scaling=hand_scaling,
             foot_scaling=foot_scaling,
