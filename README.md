@@ -138,7 +138,7 @@ ComfyUI-BodyRatioMapper/
 
 - Some code is derived from `grmchn/ComfyUI-ProportionChanger`:
 https://github.com/grmchn/ComfyUI-ProportionChanger
-- Special thanks to my friends Wang Xingming (https://space.bilibili.com/13066617) and A Lin (https://space.bilibili.com/20848068) for providing OC test assets.
+- Special thanks to my friends 望星铭 (https://space.bilibili.com/13066617) and 阿临 (https://space.bilibili.com/20848068) for providing OC test assets.
 
 ## License
 
