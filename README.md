@@ -34,8 +34,15 @@ Typical use cases:
 
 ### Video Examples
 
-- Single-person comparison: [video_001.mp4](https://github.com/user-attachments/assets/fd1b723b-04a2-43ae-8bf4-612ff6a9d1fa), [video_002.mp4](https://github.com/user-attachments/assets/0dde62cf-17a0-45c6-9898-849841c310fd)
-- Multi-person comparison: [video_003.mp4](https://github.com/user-attachments/assets/1c20ca98-4be2-4452-9fe5-01066ddfcff3)
+Single-person comparison:
+
+https://github.com/user-attachments/assets/fd1b723b-04a2-43ae-8bf4-612ff6a9d1fa
+
+https://github.com/user-attachments/assets/0dde62cf-17a0-45c6-9898-849841c310fd
+
+Multi-person comparison:
+
+https://github.com/user-attachments/assets/1c20ca98-4be2-4452-9fe5-01066ddfcff3
 
 ### Comparison Summary
 
