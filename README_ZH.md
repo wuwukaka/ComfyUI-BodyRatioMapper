@@ -35,8 +35,8 @@
 ### 视频示例
 
 
-- 单人对比：[video_001.mp4](docs/video/video_001.mp4)、[video_002.mp4](docs/video/video_002.mp4)
-- 多人对比：[video_003.mp4](docs/video/video_003.mp4)
+- 单人对比：[video_001.mp4](https://github.com/user-attachments/assets/fd1b723b-04a2-43ae-8bf4-612ff6a9d1fa)、[video_002.mp4](https://github.com/user-attachments/assets/0dde62cf-17a0-45c6-9898-849841c310fd)
+- 多人对比：[video_003.mp4](https://github.com/user-attachments/assets/1c20ca98-4be2-4452-9fe5-01066ddfcff3)
 
 ### 对比结论
 
@@ -138,5 +138,6 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 ## 许可证
 
 因部分代码来源于 GPL v3.0 项目 `ComfyUI-ProportionChanger`，因此本项目也采用 **GPL v3.0** 协议发布。  
+
 
 
