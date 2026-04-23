@@ -24,13 +24,19 @@
 
 ### 单图示例
 
-- 工作流示例：`docs/images/image_001.png`
-- 对比结果：`docs/images/image_002.png`
+- 工作流示例：
+
+![工作流示例](docs/images/image_001.png)
+
+- 对比结果：
+
+![对比结果](docs/images/image_002.png)
 
 ### 视频示例
 
-- 单人对比：`docs/video/video_001.mp4`、`docs/video/video_002.mp4`
-- 多人对比：`docs/video/video_003.mp4`
+
+- 单人对比：[video_001.mp4](docs/video/video_001.mp4)、[video_002.mp4](docs/video/video_002.mp4)
+- 多人对比：[video_003.mp4](docs/video/video_003.mp4)
 
 ### 对比结论
 
@@ -131,6 +137,6 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 
 ## 许可证
 
-本项目采用 **GPL v3.0** 协议。  
-原因：部分代码来源于 GPL v3.0 项目 `ComfyUI-ProportionChanger`，因此本项目保持同协议发布。
+因部分代码来源于 GPL v3.0 项目 `ComfyUI-ProportionChanger`，因此本项目也采用 **GPL v3.0** 协议发布。  
+
 

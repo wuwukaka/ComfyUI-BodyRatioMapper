@@ -24,13 +24,18 @@ Typical use cases:
 
 ### Single-Image Examples
 
-- Workflow example: `docs/images/image_001.png`
-- Comparison result: `docs/images/image_002.png`
+- Workflow example:
+
+![Workflow Example](docs/images/image_001.png)
+
+- Comparison result:
+
+![Comparison Result](docs/images/image_002.png)
 
 ### Video Examples
 
-- Single-person comparison: `docs/video/video_001.mp4`, `docs/video/video_002.mp4`
-- Multi-person comparison: `docs/video/video_003.mp4`
+- Single-person comparison: [video_001.mp4](docs/video/video_001.mp4), [video_002.mp4](docs/video/video_002.mp4)
+- Multi-person comparison: [video_003.mp4](docs/video/video_003.mp4)
 
 ### Comparison Summary
 
@@ -130,6 +135,6 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 
 ## License
 
-This project is released under **GPL v3.0**.  
-Reason: part of the code is derived from `ComfyUI-ProportionChanger`, which is licensed under GPL v3.0, so this project follows the same license.
+Since part of the code is derived from the GPL v3.0 project `ComfyUI-ProportionChanger`, this project is also released under **GPL v3.0**.
+
 
