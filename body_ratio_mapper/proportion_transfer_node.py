@@ -960,6 +960,8 @@ class BodyRatioMapperProportionTransfer:
         for person in ref_people:
             if isinstance(person, dict) and self._ref_person_passes_core_rule(person, conf_thresh):
                 ref_people_filtered.append(self._normalize_person_schema(person))
+        # Sort filtered reference people from left to right.
+        ref_people_filtered.sort(key=lambda p: self._person_sort_x(p, conf_thresh))
         n_ref = len(ref_people_filtered)
         self._log_multi_summary(
             "ref_filter_done",
@@ -2281,14 +2283,6 @@ class BodyRatioMapperProportionTransfer:
                 print("[Hand Scaling] Disabled by user. Setting hand FK to 1.0")
                 fk_hand = 1.0
 
-            # Phase 2.7: Upper and lower arm FK balance: When the larger value exceeds the smaller value by 1.3 times, use the smaller value as the final FK for both
-            arm_fk_max = max(fk_upper_arm, fk_lower_arm)
-            arm_fk_min = min(fk_upper_arm, fk_lower_arm)
-            if (not arm_ref_lock_to_long) and arm_fk_max > arm_fk_min * 1.3:
-                print(f"[Arm FK Balance] upper={fk_upper_arm:.3f}, lower={fk_lower_arm:.3f} -> both set to {arm_fk_min:.3f}")
-                fk_upper_arm = arm_fk_min
-                fk_lower_arm = arm_fk_min
-
             return {
                 'torso': fk_torso,
                 'neck': fk_neck,
@@ -2867,7 +2861,6 @@ class BodyRatioMapperProportionTransfer:
 
 
 # Backward/forward-compatible alias.
-
 
 
 

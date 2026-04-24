@@ -81,7 +81,10 @@ def extract_fk_values_part2_arms(ref_candidate, anc_candidate):
     Strategy:
     - If both elbows are unavailable, degrade to full-arm FK and return same FK for both segments.
     - Otherwise compute upper/lower separately with left-right complement.
-    - If reference upper/lower gap exceeds 1.3x, lock both computations to the longer reference baseline.
+    - After mirror complement, check left/right sides independently:
+      when a side's upper/lower ratio exceeds 1.18x, use that side's longer segment
+      as the effective value for both upper and lower on that side.
+    - Then compute FK by averaging effective left/right side ratios.
     - If reference lower arm is missing on both sides, lower_arm FK inherits upper_arm FK.
     """
     def has_pt(pt):
@@ -119,28 +122,62 @@ def extract_fk_values_part2_arms(ref_candidate, anc_candidate):
     anc_upper_l_eff, anc_upper_r_eff = lr_complement(anc_upper_l, anc_upper_r)
     anc_lower_l_eff, anc_lower_r_eff = lr_complement(anc_lower_l, anc_lower_r)
 
-    ref_upper_vals = [x for x in [ref_upper_l_eff, ref_upper_r_eff] if x is not None and x > 1e-6]
-    ref_lower_vals = [x for x in [ref_lower_l_eff, ref_lower_r_eff] if x is not None and x > 1e-6]
+    # Per-side arm balance after mirror complement.
+    # If one side has excessive upper/lower gap, lock that side to the longer reference.
+    ratio_threshold = 1.18
     arm_ref_lock_to_long = False
-    shared_ref_arm_baseline = None
-    if len(ref_upper_vals) > 0 and len(ref_lower_vals) > 0:
-        ref_upper_mean = sum(ref_upper_vals) / len(ref_upper_vals)
-        ref_lower_mean = sum(ref_lower_vals) / len(ref_lower_vals)
-        ref_max = max(ref_upper_mean, ref_lower_mean)
-        ref_min = min(ref_upper_mean, ref_lower_mean)
-        if ref_max > ref_min * 1.3:
+    ref_upper_l_final, ref_upper_r_final = ref_upper_l_eff, ref_upper_r_eff
+    ref_lower_l_final, ref_lower_r_final = ref_lower_l_eff, ref_lower_r_eff
+    anc_upper_l_final, anc_upper_r_final = anc_upper_l_eff, anc_upper_r_eff
+    anc_lower_l_final, anc_lower_r_final = anc_lower_l_eff, anc_lower_r_eff
+
+    # Left side: points 5-6 (upper), 6-7 (lower)
+    if (
+        ref_upper_l_eff is not None and ref_upper_l_eff > 1e-6
+        and ref_lower_l_eff is not None and ref_lower_l_eff > 1e-6
+    ):
+        left_max = max(ref_upper_l_eff, ref_lower_l_eff)
+        left_min = min(ref_upper_l_eff, ref_lower_l_eff)
+        if left_max > left_min * ratio_threshold:
+            ref_upper_l_final = left_max
+            ref_lower_l_final = left_max
             arm_ref_lock_to_long = True
-            shared_ref_arm_baseline = ref_max
 
-    if arm_ref_lock_to_long:
-        fk_upper_arm = avg_ratio_two_sides(shared_ref_arm_baseline, anc_upper_l_eff, shared_ref_arm_baseline, anc_upper_r_eff)
-    else:
-        fk_upper_arm = avg_ratio_two_sides(ref_upper_l_eff, anc_upper_l_eff, ref_upper_r_eff, anc_upper_r_eff)
+    # Right side: points 2-3 (upper), 3-4 (lower)
+    if (
+        ref_upper_r_eff is not None and ref_upper_r_eff > 1e-6
+        and ref_lower_r_eff is not None and ref_lower_r_eff > 1e-6
+    ):
+        right_max = max(ref_upper_r_eff, ref_lower_r_eff)
+        right_min = min(ref_upper_r_eff, ref_lower_r_eff)
+        if right_max > right_min * ratio_threshold:
+            ref_upper_r_final = right_max
+            ref_lower_r_final = right_max
+            arm_ref_lock_to_long = True
 
-    if arm_ref_lock_to_long:
-        fk_lower_arm_calc = avg_ratio_two_sides(shared_ref_arm_baseline, anc_lower_l_eff, shared_ref_arm_baseline, anc_lower_r_eff)
-    else:
-        fk_lower_arm_calc = avg_ratio_two_sides(ref_lower_l_eff, anc_lower_l_eff, ref_lower_r_eff, anc_lower_r_eff)
+    # Apply the same per-side arm balance policy to anchor side.
+    if (
+        anc_upper_l_eff is not None and anc_upper_l_eff > 1e-6
+        and anc_lower_l_eff is not None and anc_lower_l_eff > 1e-6
+    ):
+        left_max = max(anc_upper_l_eff, anc_lower_l_eff)
+        left_min = min(anc_upper_l_eff, anc_lower_l_eff)
+        if left_max > left_min * ratio_threshold:
+            anc_upper_l_final = left_max
+            anc_lower_l_final = left_max
+
+    if (
+        anc_upper_r_eff is not None and anc_upper_r_eff > 1e-6
+        and anc_lower_r_eff is not None and anc_lower_r_eff > 1e-6
+    ):
+        right_max = max(anc_upper_r_eff, anc_lower_r_eff)
+        right_min = min(anc_upper_r_eff, anc_lower_r_eff)
+        if right_max > right_min * ratio_threshold:
+            anc_upper_r_final = right_max
+            anc_lower_r_final = right_max
+
+    fk_upper_arm = avg_ratio_two_sides(ref_upper_l_final, anc_upper_l_final, ref_upper_r_final, anc_upper_r_final)
+    fk_lower_arm_calc = avg_ratio_two_sides(ref_lower_l_final, anc_lower_l_final, ref_lower_r_final, anc_lower_r_final)
 
     fk_lower_arm = fk_upper_arm if (ref_lower_l is None and ref_lower_r is None) else fk_lower_arm_calc
     return fk_upper_arm, fk_lower_arm, arm_ref_lock_to_long
