@@ -67,7 +67,8 @@ pip install -r requirements.txt
 ## 快速开始
 
 1. 启动 ComfyUI 并加载本插件节点。
-2. 导入示例工作流：
+2. 示例工作流需要 ComfyUI `0.16.1` 及以上版本。
+3. 导入示例工作流：
 `example_workflows/bodyratiomapper_officail_sdpose_image.json`
 `example_workflows/bodyratiomapper_officail_sdpose_video.json`
 
@@ -139,7 +140,7 @@ ComfyUI-BodyRatioMapper/
 
 - 部分代码来自 `grmchn/ComfyUI-ProportionChanger`：
 https://github.com/grmchn/ComfyUI-ProportionChanger
-- 感谢朋友望星铭（https://space.bilibili.com/13066617）和阿临（https://space.bilibili.com/20848068）提供 OC 测试素材。
+- 感谢朋友 望星铭（https://space.bilibili.com/13066617）和 阿临（https://space.bilibili.com/20848068）提供 OC 测试素材。
 
 ## 许可证
 
