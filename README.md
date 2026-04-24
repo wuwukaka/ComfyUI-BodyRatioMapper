@@ -66,7 +66,8 @@ Restart ComfyUI after installation.
 ## Quick Start
 
 1. Launch ComfyUI and make sure this plugin is loaded.
-2. Import the example workflows:
+2. Example workflows require ComfyUI `0.16.1` or newer.
+3. Import the example workflows:
 `example_workflows/bodyratiomapper_officail_sdpose_image.json`
 `example_workflows/bodyratiomapper_officail_sdpose_video.json`
 
