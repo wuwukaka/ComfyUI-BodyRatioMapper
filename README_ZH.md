@@ -138,14 +138,13 @@ ComfyUI-BodyRatioMapper/
 
 ## 致谢
 
-- 部分代码来自 `grmchn/ComfyUI-ProportionChanger`：
+- 部分代码来自 `grmchn/ComfyUI-ProportionChanger`（`pose_keypoint input` 和 `pose_keypoint preview` ）：
 https://github.com/grmchn/ComfyUI-ProportionChanger
 - 感谢朋友 望星铭（https://space.bilibili.com/13066617）和 阿临（https://space.bilibili.com/20848068）提供 OC 测试素材。
 
 ## 许可证
 
 因部分代码来源于 GPL v3.0 项目 `ComfyUI-ProportionChanger`，因此本项目也采用 **GPL v3.0** 协议发布。  
-
 
 
 
