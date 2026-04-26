@@ -2561,28 +2561,7 @@ class BodyRatioMapperProportionTransfer:
 
         # Time-offset setup completed.
 
-        # 1. Calculate Global Ratios (for X/Y global scaling only)
-        ref_2_x = ref_candidate[2][0] 
-        ref_2_y = ref_candidate[2][1]
-        ref_5_x = ref_candidate[5][0]
-        ref_5_y = ref_candidate[5][1]
-        
-        ref_center1 = 0.5*(ref_candidate[2]+ref_candidate[5])
-        ref_center2 = 0.5*(ref_candidate[8]+ref_candidate[11])
-
-        zero_2_x = anchor_candidate[2][0]
-        zero_2_y = anchor_candidate[2][1]
-        zero_5_x = anchor_candidate[5][0]
-        zero_5_y = anchor_candidate[5][1]
-        
-        zero_center1 = 0.5*(anchor_candidate[2]+anchor_candidate[5])
-        zero_center2 = 0.5*(anchor_candidate[8]+anchor_candidate[11])
-
-        # Keep global XY ratio neutral. Scale fitting is handled by FK × Global RPCA.
-        x_ratio = 1.0 
-        y_ratio = 1.0 
-
-        # 2. Select unified offset/stabilizer reference base
+        # 1. Select unified offset/stabilizer reference base
         base_offset_candidate = anchor_candidate
         base_offset_candidate_conf = anchor_candidate_conf
         base_offset_label = "anchor"
@@ -2616,15 +2595,12 @@ class BodyRatioMapperProportionTransfer:
             # Priority 3: Missing
             return None
 
-        # 3. Calculate Global Base Offset using the same point policy as stabilizer.
+        # 2. Calculate Global Base Offset using the same point policy as stabilizer.
         base_point = get_stabilizer_point(base_offset_candidate, base_offset_candidate_conf)
         ref_point = get_stabilizer_point(ref_candidate, ref_candidate_conf)
         global_base_offset = np.array([0.0, 0.0])
         if base_point is not None and ref_point is not None:
-            base_point_scaled = base_point.copy()
-            base_point_scaled[0] *= x_ratio
-            base_point_scaled[1] *= y_ratio
-            global_base_offset = ref_point - base_point_scaled
+            global_base_offset = ref_point - base_point
         print(f"[Global Offset] base={base_offset_label}, first_frame_offset_alignment={first_frame_offset_alignment}")
 
         # --- Offset Stabilizer Constants (fixed over the whole video) ---
@@ -2735,9 +2711,6 @@ class BodyRatioMapperProportionTransfer:
         def apply_spine_offset_to_lower_body(frame_data, spine_offset):
             frame_ops_external.apply_spine_offset_to_lower_body(frame_data, spine_offset, has_pt, safe_add)
 
-        def scale_frame_to_canvas(frame_data, use_body_guard=False):
-            frame_ops_external.scale_frame_to_canvas(frame_data, x_ratio, y_ratio, has_pt, use_body_guard=use_body_guard)
-
         def apply_extremity_scaling(frame_data, candidate_points):
             frame_ops_external.apply_extremity_scaling(
                 frame_data,
@@ -2815,12 +2788,11 @@ class BodyRatioMapperProportionTransfer:
             apply_global_offset_to_frame(frame_data, offset)
             force_align_face_hands_to_body(frame_data)
 
-        def run_frame_pipeline(frame_data, frame_idx, use_body_guard, require_nonzero_sum, apply_extremity_before_scale):
+        def run_frame_pipeline(frame_data, frame_idx, require_nonzero_sum, apply_extremity_before_scale):
             """Run frame preprocessing + transform pipeline with ordering controls."""
             if apply_extremity_before_scale:
                 apply_extremity_scaling(frame_data, frame_data['bodies']['candidate'])
 
-            scale_frame_to_canvas(frame_data, use_body_guard=use_body_guard)
             raw_candidate = frame_data['bodies']['candidate'].copy()
             raw_feet = frame_data['feet'].copy()
 
@@ -2838,7 +2810,6 @@ class BodyRatioMapperProportionTransfer:
         # Frame 0 transform application.
         run_frame_pipeline(
             results_vis[0], 0,
-            use_body_guard=True,
             require_nonzero_sum=True,
             apply_extremity_before_scale=False
         )
@@ -2847,7 +2818,6 @@ class BodyRatioMapperProportionTransfer:
         for i in range(1, len(results_vis)):
             run_frame_pipeline(
                 results_vis[i], i,
-                use_body_guard=False,
                 require_nonzero_sum=False,
                 apply_extremity_before_scale=False
             )
@@ -2861,8 +2831,6 @@ class BodyRatioMapperProportionTransfer:
 
 
 # Backward/forward-compatible alias.
-
-
 
 
 

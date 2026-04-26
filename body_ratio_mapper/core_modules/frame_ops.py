@@ -384,22 +384,6 @@ def apply_spine_offset_to_lower_body(frame_data, spine_offset, has_pt, safe_add)
     safe_add(frame_data['feet'][1], spine_offset)
 
 
-def scale_frame_to_canvas(frame_data, x_ratio, y_ratio, has_pt, use_body_guard=False):
-    """
-    Scale frame coordinates by canvas XY ratios.
-
-    - Body scaling can be guarded by use_body_guard + has_pt.
-    - Hands and feet are always scaled to keep chain consistency.
-    """
-    if (not use_body_guard) or has_pt(frame_data['bodies']['candidate']):
-        frame_data['bodies']['candidate'][:, 0] *= x_ratio
-        frame_data['bodies']['candidate'][:, 1] *= y_ratio
-    frame_data['hands'][:, :, 0] *= x_ratio
-    frame_data['hands'][:, :, 1] *= y_ratio
-    frame_data['feet'][:, :, 0] *= x_ratio
-    frame_data['feet'][:, :, 1] *= y_ratio
-
-
 def apply_extremity_scaling(frame_data, candidate_points, true_hand_scale, true_foot_edge1_scale, true_foot_edge2_scale, true_foot_edge3_scale, true_body_to_foot_ankle_scale, enable_foot_internal_scaling, scale_hand_isotropically, scale_foot_by_edges):
     """
     Apply hand and foot internal scaling before/after body-chain stages (as directed by caller).
