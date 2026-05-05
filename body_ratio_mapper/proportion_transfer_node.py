@@ -2830,8 +2830,5 @@ class BodyRatioMapperProportionTransfer:
         return results_vis, anchor_idx, best_hand
 
 
-# Backward/forward-compatible alias.
-
-
 
 
