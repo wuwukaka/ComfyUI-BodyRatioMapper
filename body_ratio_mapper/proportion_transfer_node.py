@@ -477,16 +477,14 @@ class BodyRatioMapperProportionTransfer:
 
     def _clone_track_fast(self, track):
         """Fast clone for single-person track frames (people[0] + canvas metadata)."""
-        if not isinstance(track, list):
-            return []
         out = []
         for frame in track:
-            people = frame.get("people", []) if isinstance(frame, dict) else []
-            person = people[0] if isinstance(people, list) and len(people) > 0 else self._build_zero_person_openpose()
+            people = frame.get("people", [])
+            person = people[0] if len(people) > 0 else self._build_zero_person_openpose()
             out.append({
                 "people": [self._clone_person_fast(person)],
-                "canvas_width": frame.get("canvas_width", 512) if isinstance(frame, dict) else 512,
-                "canvas_height": frame.get("canvas_height", 768) if isinstance(frame, dict) else 768,
+                "canvas_width": frame.get("canvas_width", 512),
+                "canvas_height": frame.get("canvas_height", 768),
             })
         return out
 
@@ -569,7 +567,7 @@ class BodyRatioMapperProportionTransfer:
         valid_count = 0
         for frame in track_frames:
             people = frame.get("people", [])
-            person = people[0] if isinstance(people, list) and len(people) > 0 else self._build_zero_person_openpose()
+            person = people[0] if len(people) > 0 else self._build_zero_person_openpose()
             if self._video_frame_passes_required_points(person, conf_thresh):
                 valid_count += 1
         return (valid_count / float(len(track_frames))) > 0.65
@@ -599,9 +597,7 @@ class BodyRatioMapperProportionTransfer:
 
     def _sorted_people_for_frame(self, frame, conf_thresh):
         people = frame.get("people", [])
-        if not isinstance(people, list):
-            return []
-        normalized = [self._normalize_person_schema(p) for p in people if isinstance(p, dict)]
+        normalized = [self._normalize_person_schema(p) for p in people]
         normalized.sort(key=lambda p: self._person_sort_x(p, conf_thresh))
         return normalized
 
@@ -640,20 +636,20 @@ class BodyRatioMapperProportionTransfer:
             for pi in range(n_people):
                 person_frame = changed_tracks[pi][fi] if fi < len(changed_tracks[pi]) else changed_tracks[pi][0]
                 person_list = person_frame.get("people", [])
-                person = person_list[0] if isinstance(person_list, list) and len(person_list) > 0 else self._build_zero_person_openpose()
+                person = person_list[0] if len(person_list) > 0 else self._build_zero_person_openpose()
                 out_frame["people"].append(self._normalize_person_schema(person))
             merged.append(out_frame)
         return merged
 
     def _is_track_frame_valid_for_baseline(self, frame, conf_thresh):
         people = frame.get("people", [])
-        if not isinstance(people, list) or len(people) == 0 or not isinstance(people[0], dict):
+        if len(people) == 0:
             return False
         person = self._normalize_person_schema(people[0])
         return not self._is_frame_absent(person, conf_thresh)
 
     def _ensure_track_first_frame_valid(self, track, conf_thresh):
-        if not isinstance(track, list) or len(track) == 0:
+        if len(track) == 0:
             return track
         if self._is_track_frame_valid_for_baseline(track[0], conf_thresh):
             return track
@@ -669,21 +665,19 @@ class BodyRatioMapperProportionTransfer:
 
         # Keep frame-0 canvas metadata, replace only person payload.
         src_people = track[first_valid_idx].get("people", [])
-        src_person = src_people[0] if isinstance(src_people, list) and len(src_people) > 0 else self._build_zero_person_openpose()
+        src_person = src_people[0] if len(src_people) > 0 else self._build_zero_person_openpose()
         track0 = dict(track[0])
         track0["people"] = [self._clone_person_fast(src_person)]
         track[0] = track0
         return track
 
     def _ensure_tracks_first_frame_valid(self, tracks, conf_thresh):
-        if not isinstance(tracks, list):
-            return tracks
         for i in range(len(tracks)):
             tracks[i] = self._ensure_track_first_frame_valid(tracks[i], conf_thresh)
         return tracks
 
     def _find_first_full_valid_frame_index(self, frames, n_people, conf_thresh):
-        if not isinstance(frames, list) or n_people <= 0:
+        if n_people <= 0:
             return -1
         for fi, frame in enumerate(frames):
             people = self._sorted_people_for_frame(frame, conf_thresh)
@@ -717,9 +711,9 @@ class BodyRatioMapperProportionTransfer:
         return float(ratio) * float(np.sqrt(float(canvas_w) * float(canvas_w) + float(canvas_h) * float(canvas_h)))
 
     def _stabilize_tracks_after_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05):
-        if not isinstance(tracks, list) or len(tracks) == 0:
+        if len(tracks) == 0:
             return tracks
-        if not isinstance(frames, list) or full_idx < 0 or full_idx >= len(frames):
+        if full_idx < 0 or full_idx >= len(frames):
             return tracks
 
         n = len(tracks)
@@ -790,9 +784,9 @@ class BodyRatioMapperProportionTransfer:
         return tracks
 
     def _stabilize_tracks_before_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05):
-        if not isinstance(tracks, list) or len(tracks) == 0:
+        if len(tracks) == 0:
             return tracks
-        if not isinstance(frames, list) or full_idx <= 0 or full_idx >= len(frames):
+        if full_idx <= 0 or full_idx >= len(frames):
             return tracks
 
         n = len(tracks)
@@ -1318,15 +1312,15 @@ class BodyRatioMapperProportionTransfer:
         def apply_best_neck_to_anchor_output(anchor_frames):
             if not best_neck_search:
                 return
-            if not isinstance(anchor_frames, list) or len(anchor_frames) == 0:
+            if len(anchor_frames) == 0:
                 return
             frame = anchor_frames[0]
             people = frame.get("people", [])
-            if not isinstance(people, list) or len(people) == 0 or not isinstance(people[0], dict):
+            if len(people) == 0:
                 return
             person = people[0]
             pose_2d = person.get("pose_keypoints_2d", [])
-            if not isinstance(pose_2d, list) or len(pose_2d) < 18 * 3:
+            if len(pose_2d) < 18 * 3:
                 return
 
             canvas_w = float(frame.get("canvas_width", 512))
@@ -1468,16 +1462,13 @@ class BodyRatioMapperProportionTransfer:
                 person["face_keypoints_2d"] = face_2d
 
         def enforce_anchor_output_domain(anchor_frames):
-            if not isinstance(anchor_frames, list):
-                return
-
             to_absolute = bool(output_absolute_coordinates)
 
             def _is_person_normalized(p):
                 vals = []
                 for key in ("pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d", "foot_keypoints_2d"):
                     arr = p.get(key, [])
-                    if isinstance(arr, list) and len(arr) >= 3:
+                    if len(arr) >= 3:
                         vals.extend([abs(float(v)) for v in arr[0:120:3]])
                         vals.extend([abs(float(v)) for v in arr[1:121:3]])
                 vals = [v for v in vals if v > 1e-6]
@@ -1486,7 +1477,7 @@ class BodyRatioMapperProportionTransfer:
                 return max(vals) <= 1.5
 
             def _convert_triplets(arr, canvas_w, canvas_h, to_abs):
-                if not isinstance(arr, list) or len(arr) < 3:
+                if len(arr) < 3:
                     return arr
                 out = arr[:]
                 for i in range(0, len(out), 3):
@@ -1503,16 +1494,10 @@ class BodyRatioMapperProportionTransfer:
                 return out
 
             for frame in anchor_frames:
-                if not isinstance(frame, dict):
-                    continue
                 canvas_w = float(frame.get("canvas_width", 512))
                 canvas_h = float(frame.get("canvas_height", 768))
                 people = frame.get("people", [])
-                if not isinstance(people, list):
-                    continue
                 for person in people:
-                    if not isinstance(person, dict):
-                        continue
                     is_norm = _is_person_normalized(person)
                     if to_absolute and is_norm:
                         for key in ("pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d", "foot_keypoints_2d"):
@@ -1535,8 +1520,6 @@ class BodyRatioMapperProportionTransfer:
         sy = float(height)
 
         def _scale_points_inplace(points):
-            if not isinstance(points, np.ndarray) or points.size == 0:
-                return
             mask = matrix_ops_external.valid_point_mask(points, eps=0.01)
             points[..., 0][mask] *= sx
             points[..., 1][mask] *= sy
@@ -1554,8 +1537,7 @@ class BodyRatioMapperProportionTransfer:
         sy = float(height)
 
         def _scale_points_inplace(points):
-            if not isinstance(points, np.ndarray) or points.size == 0:
-                return
+
             mask = matrix_ops_external.valid_point_mask(points, eps=0.01)
             points[..., 0][mask] /= sx
             points[..., 1][mask] /= sy
@@ -1566,57 +1548,6 @@ class BodyRatioMapperProportionTransfer:
             _scale_points_inplace(frame['hands'])
             _scale_points_inplace(frame['feet'])
         return pose_data
-
-    # ========== Phase 1: 13-Bone Global RPCA Calculation ==========
-    def calculate_13_bone_global_rpca(self, anchor_candidate, anchor_faces, f0_candidate, f0_faces, alignment_mode=True):
-        """Calculate 13-bone Global RPCA multiplier (Anchor vs F0, deviation-based sorting)."""
-        return calculate_global_rpca_external(
-            anchor_candidate=anchor_candidate,
-            anchor_faces=anchor_faces,
-            f0_candidate=f0_candidate,
-            f0_faces=f0_faces,
-            alignment_mode=alignment_mode,
-        )
-
-    # ========== Phase 2: FK Value Extraction Functions ==========
-    def _lr_complement(self, left, right):
-        return scale_solver_external.lr_complement(left, right)
-
-    def _avg_ratio_two_sides(self, ref_l, anc_l, ref_r, anc_r):
-        return scale_solver_external.avg_ratio_two_sides(ref_l, anc_l, ref_r, anc_r)
-
-    def extract_fk_values_part1_torso_neck(self, ref_candidate, anc_candidate):
-        """Extract torso and neck FK values."""
-        return scale_solver_external.extract_fk_values_part1_torso_neck(ref_candidate, anc_candidate)
-
-    def extract_fk_values_part2_arms(self, ref_candidate, anc_candidate):
-        """Extract arm FK values with mirror compensation and fallback."""
-        return scale_solver_external.extract_fk_values_part2_arms(ref_candidate, anc_candidate)
-
-    def extract_fk_values_part3_legs(self, ref_candidate, anc_candidate):
-        """Extract leg FK values with mirror compensation and fallback."""
-        return scale_solver_external.extract_fk_values_part3_legs(ref_candidate, anc_candidate)
-
-    def extract_fk_values_part4_hands_feet_face(self, ref_candidate, ref_faces, ref_hands, ref_feet, anc_candidate, anc_faces, anc_hands, anc_feet, anc_hand_baseline=None):
-        """Extract hand, foot, and face FK values."""
-        return scale_solver_external.extract_fk_values_part4_hands_feet_face(
-            ref_candidate, ref_faces, ref_hands, ref_feet, anc_candidate, anc_faces, anc_hands, anc_feet, anc_hand_baseline=anc_hand_baseline
-        )
-
-    def validate_hand_fk(self, hand_fk, torso, neck, upper_arm, lower_arm, upper_leg, lower_leg, foot_edge1, foot_edge2, foot_edge3, body_to_foot_ankle, face_x, face_y, eye_width=None):
-        """Validate hand FK value to prevent anomalies from dense keypoint measurements."""
-        return scale_solver_external.validate_hand_fk(
-            hand_fk, torso, neck, upper_arm, lower_arm, upper_leg, lower_leg, foot_edge1, foot_edge2, foot_edge3, body_to_foot_ankle, face_x, face_y, eye_width=eye_width, logger=print
-        )
-
-    # ========== Phase 3: Forge Final Scale Constants ==========
-    def forge_final_scale_constants(self, fk_values, global_rpca_multiplier, alignment_mode=True):
-        """Forge final scaling constants: FK × Global RPCA."""
-        return forge_final_scales_external(
-            fk_values=fk_values,
-            global_rpca_multiplier=global_rpca_multiplier,
-            alignment_mode=alignment_mode,
-        )
 
     def apply_batch_proportion_changes(self, batch_pose_data, ref_data,
                                      canvas_width, canvas_height, ref_canvas_width, ref_canvas_height, manual_ref_data=None, config=None):
@@ -1715,10 +1646,7 @@ class BodyRatioMapperProportionTransfer:
             cache = []
             for frame in frames:
                 c = frame['bodies']['candidate']
-                if isinstance(c, np.ndarray) and c.ndim == 2 and c.shape[1] >= 2:
-                    present = matrix_ops_external.valid_point_mask(c, eps=0.01)
-                else:
-                    present = np.zeros((18,), dtype=bool)
+                present = matrix_ops_external.valid_point_mask(c, eps=0.01)
 
                 def pt_or_none(idx):
                     if idx < len(c) and idx < len(present) and present[idx]:
@@ -1787,9 +1715,6 @@ class BodyRatioMapperProportionTransfer:
             Step 1: Scale toes relative to current foot ankle (independent edges)
             Step 2: Enforce edge3 consistency between toes
             """
-            if not isinstance(foot_array, np.ndarray) or foot_array.shape[0] < 3:
-                return
-
             # Keep legacy internal foot-shape topology:
             # root=idx0, toe_a=idx1, toe_b=idx2.
             root = foot_array[0].copy()
@@ -1856,8 +1781,6 @@ class BodyRatioMapperProportionTransfer:
                 if foot_idx >= len(feet) or body_idx >= len(candidate):
                     continue
                 foot = feet[foot_idx]
-                if not isinstance(foot, np.ndarray) or foot.shape[0] < 1:
-                    continue
 
                 body_now = candidate[body_idx]
                 # Heel (index 2) is used as foot root.
@@ -1884,7 +1807,6 @@ class BodyRatioMapperProportionTransfer:
         # --- Helpers for Independent Extremity Lengths (Physical Pixel Coordinates) ---
         # Uses unified physical distance calculation to prevent coordinate system mismatch
         def get_max_hand_len(hand_pts):
-            if not isinstance(hand_pts, np.ndarray) or hand_pts.shape[0] < 21: return 0.0
             if not has_pt(hand_pts[0]): return 0.0
             tips = [4, 8, 12, 16, 20]
             max_d = 0.0
@@ -1895,7 +1817,6 @@ class BodyRatioMapperProportionTransfer:
             return max_d
 
         def get_max_foot_len(foot_pts):
-            if not isinstance(foot_pts, np.ndarray) or foot_pts.shape[0] < 3: return 0.0
             pts = []
             for i in range(3):
                 if has_pt(foot_pts[i]): pts.append(foot_pts[i])
@@ -2051,13 +1972,9 @@ class BodyRatioMapperProportionTransfer:
                 return abs(a - b) / b
 
             def hand_all_conf_ge(hand_conf_arr, thresh):
-                if not isinstance(hand_conf_arr, np.ndarray) or hand_conf_arr.shape[0] < 21:
-                    return False
                 return bool(np.all(hand_conf_arr[:21] >= thresh))
 
             def is_mid_chain_outlier(hand_pts):
-                if not isinstance(hand_pts, np.ndarray) or hand_pts.shape[0] < 13:
-                    return True
                 segs = [(0, 9), (9, 10), (10, 11), (11, 12)]
                 for a, b in segs:
                     if not (has_pt(hand_pts[a]) and has_pt(hand_pts[b])):
@@ -2068,8 +1985,6 @@ class BodyRatioMapperProportionTransfer:
                 return False
 
             def has_finger_segment_longer_than_forearm(hand_pts, forearm_len):
-                if not isinstance(hand_pts, np.ndarray) or hand_pts.shape[0] < 21:
-                    return True
                 if forearm_len is None or forearm_len <= 1e-6:
                     return True
                 finger_segs = [
@@ -2115,12 +2030,7 @@ class BodyRatioMapperProportionTransfer:
                     d_up_r = rel_diff(up_r, anchor_upper_r)
                     d_low_r = rel_diff(low_r, anchor_lower_r)
                     if d_up_r is not None and d_low_r is not None and d_up_r <= 0.05 and d_low_r <= 0.05:
-                        right_conf_ok = (
-                            isinstance(hands_conf, np.ndarray)
-                            and hands_conf.shape[0] > 1
-                            and hand_all_conf_ge(hands_conf[1], conf_thresh)
-                        )
-                        if not right_conf_ok:
+                        if not hand_all_conf_ge(hands_conf[1], conf_thresh):
                             continue
                         hand_len_r = get_mid_finger_chain_len(hands[1]) if len(hands) > 1 else None
                         if hand_len_r is not None and is_mid_chain_outlier(hands[1]):
@@ -2133,7 +2043,7 @@ class BodyRatioMapperProportionTransfer:
                                 "side": "right",
                                 "frame_index": fi,
                                 "pts": hands[1].copy(),
-                                "conf": hands_conf[1].copy() if isinstance(hands_conf, np.ndarray) and len(hands_conf) > 1 else np.zeros((21,)),
+                                "conf": hands_conf[1].copy(),
                             })
 
                     # Left side match -> collect left hand (index 0)
@@ -2142,12 +2052,7 @@ class BodyRatioMapperProportionTransfer:
                     d_up_l = rel_diff(up_l, anchor_upper_l)
                     d_low_l = rel_diff(low_l, anchor_lower_l)
                     if d_up_l is not None and d_low_l is not None and d_up_l <= 0.05 and d_low_l <= 0.05:
-                        left_conf_ok = (
-                            isinstance(hands_conf, np.ndarray)
-                            and hands_conf.shape[0] > 0
-                            and hand_all_conf_ge(hands_conf[0], conf_thresh)
-                        )
-                        if not left_conf_ok:
+                        if not hand_all_conf_ge(hands_conf[0], conf_thresh):
                             continue
                         hand_len_l = get_mid_finger_chain_len(hands[0]) if len(hands) > 0 else None
                         if hand_len_l is not None and is_mid_chain_outlier(hands[0]):
@@ -2160,7 +2065,7 @@ class BodyRatioMapperProportionTransfer:
                                 "side": "left",
                                 "frame_index": fi,
                                 "pts": hands[0].copy(),
-                                "conf": hands_conf[0].copy() if isinstance(hands_conf, np.ndarray) and len(hands_conf) > 0 else np.zeros((21,)),
+                                "conf": hands_conf[0].copy(),
                             })
 
             if len(hand_candidates) == 0:
@@ -2169,12 +2074,10 @@ class BodyRatioMapperProportionTransfer:
             return best["length"], best
 
         def build_avg_hand_from_anchor_hands(anc_hands):
-            if not isinstance(anc_hands, np.ndarray) or anc_hands.shape[0] < 2:
+            if anc_hands.shape[0] < 2:
                 return None, None
             left = anc_hands[0]
             right = anc_hands[1]
-            if not isinstance(left, np.ndarray) or not isinstance(right, np.ndarray):
-                return None, None
 
             n = min(left.shape[0], right.shape[0])
             avg_pts = np.zeros((n, 2))
@@ -2250,10 +2153,10 @@ class BodyRatioMapperProportionTransfer:
                     return float(np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2))
                 return None
 
-            fk_torso, fk_neck, fk_shoulder, fk_hip_width = self.extract_fk_values_part1_torso_neck(ref_candidate, anc_candidate)
-            fk_upper_arm, fk_lower_arm, arm_ref_lock_to_long = self.extract_fk_values_part2_arms(ref_candidate, anc_candidate)
-            fk_upper_leg, fk_lower_leg = self.extract_fk_values_part3_legs(ref_candidate, anc_candidate)
-            part4_values = self.extract_fk_values_part4_hands_feet_face(
+            fk_torso, fk_neck, fk_shoulder, fk_hip_width = scale_solver_external.extract_fk_values_part1_torso_neck(ref_candidate, anc_candidate)
+            fk_upper_arm, fk_lower_arm, arm_ref_lock_to_long = scale_solver_external.extract_fk_values_part2_arms(ref_candidate, anc_candidate)
+            fk_upper_leg, fk_lower_leg = scale_solver_external.extract_fk_values_part3_legs(ref_candidate, anc_candidate)
+            part4_values = scale_solver_external.extract_fk_values_part4_hands_feet_face(
                 ref_candidate, ref_faces, ref_hands, ref_feet,
                 anc_candidate, anc_faces, anc_hands, anc_feet, hand_baseline
             )
@@ -2270,8 +2173,8 @@ class BodyRatioMapperProportionTransfer:
             )
 
             # Phase 2.5: Hand FK Anomaly Protection
-            fk_hand = self.validate_hand_fk(fk_hand, fk_torso, fk_neck, fk_upper_arm, fk_lower_arm,
-                                            fk_upper_leg, fk_lower_leg, fk_foot_edge1, fk_foot_edge2, fk_foot_edge3, fk_body_to_foot_ankle, fk_face_x, fk_face_y, fk_eye_width)
+            fk_hand = scale_solver_external.validate_hand_fk(fk_hand, fk_torso, fk_neck, fk_upper_arm, fk_lower_arm,
+                                            fk_upper_leg, fk_lower_leg, fk_foot_edge1, fk_foot_edge2, fk_foot_edge3, fk_body_to_foot_ankle, fk_face_x, fk_face_y, fk_eye_width, logger=print)
 
             # Optional mode: replace hand FK with shoulder FK.
             if use_shoulder_fk_for_hand:
@@ -2309,7 +2212,7 @@ class BodyRatioMapperProportionTransfer:
             f0_faces = results_vis[0]['faces']
 
             # Phase 1: Calculate 13-bone Global RPCA (Anchor vs F0)
-            global_rpca = self.calculate_13_bone_global_rpca(
+            global_rpca = calculate_global_rpca_external(
                 anc_candidate, anc_faces,
                 f0_candidate, f0_faces,
                 alignment_mode
@@ -2319,7 +2222,7 @@ class BodyRatioMapperProportionTransfer:
             fk_pkg = build_fk_values(anc_candidate, anc_faces, anc_hands, anc_feet, hand_baseline)
 
             # Phase 3: Forge final scale constants (FK × RPCA)
-            final_scale_pkg = self.forge_final_scale_constants(fk_pkg, global_rpca, alignment_mode)
+            final_scale_pkg = forge_final_scales_external(fk_pkg, global_rpca, alignment_mode)
 
             print(f"[New Pipeline] Global RPCA: {global_rpca:.3f}")
             print(f"[New Pipeline] Final Scales: torso={final_scale_pkg['torso']:.3f}, neck={final_scale_pkg['neck']:.3f}, "

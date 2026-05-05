@@ -35,7 +35,7 @@ def force_align_face_hands_to_body(frame_data, has_pt, safe_add):
     faces = frame_data['faces']
     candidate = frame_data['bodies']['candidate']
 
-    if isinstance(faces, np.ndarray) and faces.shape[1] > 30 and has_pt(faces):
+    if faces.shape[1] > 30 and has_pt(faces):
         body_nose = candidate[0]
         if has_pt(body_nose):
             face_nose = faces[0, 30]
@@ -43,7 +43,7 @@ def force_align_face_hands_to_body(frame_data, has_pt, safe_add):
                 safe_add(faces, body_nose - face_nose)
 
     hands = frame_data['hands']
-    if isinstance(hands, np.ndarray) and hands.shape[0] > 0:
+    if hands.shape[0] > 0:
         if hands.shape[0] > 0 and has_pt(hands[0]) and len(candidate) > 7:
             body_wr_l = candidate[7]
             if has_pt(body_wr_l):
@@ -115,8 +115,7 @@ def apply_arm_chain_offsets(frame_data, raw_candidate, upper_arm_ratio, lower_ar
 
     # Right arm: 2 -> 3 -> 4, propagate same delta to right hand (index 1).
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 4
+        len(raw_candidate) > 4
         and has_pt(candidate[2])
         and has_pt(candidate[3])
         and has_pt(raw_candidate[2])
@@ -131,8 +130,7 @@ def apply_arm_chain_offsets(frame_data, raw_candidate, upper_arm_ratio, lower_ar
         safe_add(frame_data['hands'][1], delta_3)
 
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 4
+        len(raw_candidate) > 4
         and has_pt(candidate[3])
         and has_pt(candidate[4])
         and has_pt(raw_candidate[3])
@@ -147,8 +145,7 @@ def apply_arm_chain_offsets(frame_data, raw_candidate, upper_arm_ratio, lower_ar
 
     # Left arm: 5 -> 6 -> 7, propagate same delta to left hand (index 0).
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 7
+        len(raw_candidate) > 7
         and has_pt(candidate[5])
         and has_pt(candidate[6])
         and has_pt(raw_candidate[5])
@@ -163,8 +160,7 @@ def apply_arm_chain_offsets(frame_data, raw_candidate, upper_arm_ratio, lower_ar
         safe_add(frame_data['hands'][0], delta_6)
 
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 7
+        len(raw_candidate) > 7
         and has_pt(candidate[6])
         and has_pt(candidate[7])
         and has_pt(raw_candidate[6])
@@ -209,8 +205,7 @@ def apply_leg_chain_offsets(frame_data, raw_candidate, hip_width_scale, ll1_rati
 
     # Right leg in this index convention: 8 -> 9 -> 10, propagate to right foot (index 1).
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 10
+        len(raw_candidate) > 10
         and has_pt(candidate[8])
         and has_pt(candidate[9])
         and has_pt(raw_candidate[8])
@@ -225,8 +220,7 @@ def apply_leg_chain_offsets(frame_data, raw_candidate, hip_width_scale, ll1_rati
         safe_add(frame_data['feet'][1], delta_9)
 
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 10
+        len(raw_candidate) > 10
         and has_pt(candidate[9])
         and has_pt(candidate[10])
         and has_pt(raw_candidate[9])
@@ -241,8 +235,7 @@ def apply_leg_chain_offsets(frame_data, raw_candidate, hip_width_scale, ll1_rati
 
     # Left leg in this index convention: 11 -> 12 -> 13, propagate to left foot (index 0).
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 13
+        len(raw_candidate) > 13
         and has_pt(candidate[11])
         and has_pt(candidate[12])
         and has_pt(raw_candidate[11])
@@ -257,8 +250,7 @@ def apply_leg_chain_offsets(frame_data, raw_candidate, hip_width_scale, ll1_rati
         safe_add(frame_data['feet'][0], delta_12)
 
     if (
-        isinstance(raw_candidate, np.ndarray)
-        and len(raw_candidate) > 13
+        len(raw_candidate) > 13
         and has_pt(candidate[12])
         and has_pt(candidate[13])
         and has_pt(raw_candidate[12])
@@ -354,7 +346,7 @@ def apply_face_mask_for_frame(frame_data, face_x_scale, face_y_scale, eye_width_
         eye_adjust_ratio = eye_width_scale / face_x_scale
         if abs(eye_adjust_ratio - 1.0) > 1e-6:
             faces = frame_data['faces']
-            if isinstance(faces, np.ndarray) and faces.shape[0] > 0 and faces.shape[1] >= 48:
+            if faces.shape[0] > 0 and faces.shape[1] >= 48:
                 for eye_indices in ([36, 37, 38, 39, 40, 41], [42, 43, 44, 45, 46, 47]):
                     pts = []
                     for idx in eye_indices:
