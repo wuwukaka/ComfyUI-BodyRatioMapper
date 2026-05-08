@@ -140,7 +140,7 @@ ComfyUI-BodyRatioMapper/
 
 - 部分代码来自 `grmchn/ComfyUI-ProportionChanger`（`pose_keypoint input` 和 `pose_keypoint preview` ）：
 https://github.com/grmchn/ComfyUI-ProportionChanger
-- 感谢朋友 望星铭（https://space.bilibili.com/13066617）和 阿临（https://space.bilibili.com/20848068）提供 OC 测试素材。
+- 感谢朋友 望星铭（ https://space.bilibili.com/13066617 ）和阿临（ https://space.bilibili.com/20848068 ）提供 OC 测试素材。
 
 ## 许可证
 
