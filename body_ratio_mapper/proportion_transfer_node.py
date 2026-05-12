@@ -1163,6 +1163,10 @@ class BodyRatioMapperProportionTransfer:
             confidence_threshold=confidence_threshold,
             output_absolute_coordinates=output_absolute_coordinates,
         )
+        # Keep local post-process behavior aligned with resolved runtime config.
+        best_neck_search = runtime_config.best_neck_search
+        confidence_threshold = float(runtime_config.confidence_threshold)
+        output_absolute_coordinates = runtime_config.output_absolute_coordinates
         
         # Capture anchor_idx from the main processing function
         processed_batch, anchor_idx, best_hand = self.apply_batch_proportion_changes(
