@@ -26,6 +26,8 @@ def draw_sdpose_wholebody_standard(
     draw_mouth=True,
     draw_hands=True,
     draw_feet=True,
+    draw_thigh=True,
+    draw_calf=True,
 ):
     """
     Render whole-body keypoints in SDPose/OpenPose style.
@@ -49,8 +51,19 @@ def draw_sdpose_wholebody_standard(
 
     # 1. Draw body and feet.
     if len(keypoints) >= 18:
+        # Segment toggles (OpenPose body indices are 1-based in body_limbSeq).
+        # Thigh: hip->knee (9->10, 12->13)
+        # Calf: knee->ankle (10->11, 13->14)
+        thigh_segments = {(9, 10), (12, 13)}
+        calf_segments = {(10, 11), (13, 14)}
         for i, limb in enumerate(body_limbSeq):
-            idx1, idx2 = limb[0] - 1, limb[1] - 1
+            seg = (limb[0], limb[1])
+            if (not draw_thigh) and seg in thigh_segments:
+                continue
+            if (not draw_calf) and seg in calf_segments:
+                continue
+
+            idx1, idx2 = seg[0] - 1, seg[1] - 1
             if idx1 >= 18 or idx2 >= 18: continue
             if scores is not None and (scores[idx1] < threshold or scores[idx2] < threshold): continue
             
@@ -134,6 +147,8 @@ class BodyRatioMapperSDPoseRender:
                 "draw_mouth": ("BOOLEAN", {"default": True, "label_on": "Draw Mouth", "label_off": "Hide Mouth"}),
                 "draw_hands": ("BOOLEAN", {"default": True, "label_on": "Draw Hands", "label_off": "Hide Hands"}),
                 "draw_feet": ("BOOLEAN", {"default": True, "label_on": "Draw Feet", "label_off": "Hide Feet"}),
+                "draw_thigh": ("BOOLEAN", {"default": True, "label_on": "Draw Thigh", "label_off": "Hide Thigh"}),
+                "draw_calf": ("BOOLEAN", {"default": True, "label_on": "Draw Calf", "label_off": "Hide Calf"}),
             },
         }
 
@@ -154,6 +169,8 @@ class BodyRatioMapperSDPoseRender:
         draw_mouth=True,
         draw_hands=True,
         draw_feet=True,
+        draw_thigh=True,
+        draw_calf=True,
     ):
         if not pose_keypoint:
             return (torch.zeros((1, 512, 512, 3)),)
@@ -220,6 +237,8 @@ class BodyRatioMapperSDPoseRender:
                     draw_mouth=draw_mouth,
                     draw_hands=draw_hands,
                     draw_feet=draw_feet,
+                    draw_thigh=draw_thigh,
+                    draw_calf=draw_calf,
                 )
 
             # Canvas is already RGB and ComfyUI expects RGB, so no BGR->RGB conversion is needed.
