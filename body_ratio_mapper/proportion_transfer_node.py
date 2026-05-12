@@ -33,7 +33,7 @@ class RuntimeConfig:
     use_torso_fk_for_foot: bool = False
     best_neck_search: bool = False
     final_offset_alignment: bool = True
-    first_frame_offset_alignment: bool = False
+    base_offset_mode: bool = False
     anchor_output_mode: str = "single_frame_multi_person"
     print_detailed_logs: bool = False
     confidence_threshold: float = 0.30
@@ -60,7 +60,7 @@ class BodyRatioMapperProportionTransfer:
                 "use_torso_fk_for_foot": ("BOOLEAN", {"default": False, "label_on": "Torso FK For Foot ON", "label_off": "Torso FK For Foot OFF", "tooltip": "Use torso FK to replace foot edge1/edge2/edge3 FK."}),
                 "best_neck_search": ("BOOLEAN", {"default": False, "label_on": "Best Neck Search ON", "label_off": "Best Neck Search OFF"}),
                 "final_offset_alignment": ("BOOLEAN", {"default": True, "label_on": "Final Offset Align ON", "label_off": "Final Offset Align OFF"}),
-                "first_frame_offset_alignment": ("BOOLEAN", {"default": False, "label_on": "First-Frame Offset", "label_off": "Anchor-Frame Offset", "tooltip": "ON: align global offset by reference vs first frame. OFF: align by reference vs anchor frame."}),
+                "base_offset_mode": ("BOOLEAN", {"default": False, "label_on": "First-Frame Offset", "label_off": "Anchor-Frame Offset", "tooltip": "ON: align global offset by reference vs first frame. OFF: align by reference vs anchor frame."}),
                 "anchor_output_mode": (["single_frame_multi_person", "multi_frame_single_person"], {"default": "single_frame_multi_person", "tooltip": "Anchor output layout mode."}),
                 "print_detailed_logs": ("BOOLEAN", {"default": False, "label_on": "Detailed Logs ON", "label_off": "Detailed Logs OFF", "tooltip": "Enable verbose internal logs. OFF uses concise summary logs."}),
                 "confidence_threshold": ("FLOAT", {"default": 0.30, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Unified confidence threshold for WSCS and reference gating."}),
@@ -117,7 +117,7 @@ class BodyRatioMapperProportionTransfer:
                               use_torso_fk_for_foot=False,
                               best_neck_search=False,
                               final_offset_alignment=True,
-                              first_frame_offset_alignment=False,
+                              base_offset_mode=False,
                               anchor_output_mode="single_frame_multi_person",
                               print_detailed_logs=False,
                               confidence_threshold=0.30,
@@ -135,7 +135,7 @@ class BodyRatioMapperProportionTransfer:
             use_torso_fk_for_foot=bool(use_torso_fk_for_foot),
             best_neck_search=bool(best_neck_search),
             final_offset_alignment=bool(final_offset_alignment),
-            first_frame_offset_alignment=bool(first_frame_offset_alignment),
+            base_offset_mode=bool(base_offset_mode),
             anchor_output_mode=str(anchor_output_mode),
             print_detailed_logs=bool(print_detailed_logs),
             confidence_threshold=float(confidence_threshold),
@@ -155,7 +155,7 @@ class BodyRatioMapperProportionTransfer:
                                 use_torso_fk_for_foot=False,
                                 best_neck_search=False,
                                 final_offset_alignment=True,
-                                first_frame_offset_alignment=False,
+                                base_offset_mode=False,
                                 anchor_output_mode="single_frame_multi_person",
                                 print_detailed_logs=False,
                                 confidence_threshold=0.30,
@@ -175,7 +175,7 @@ class BodyRatioMapperProportionTransfer:
             use_torso_fk_for_foot=use_torso_fk_for_foot,
             best_neck_search=best_neck_search,
             final_offset_alignment=final_offset_alignment,
-            first_frame_offset_alignment=first_frame_offset_alignment,
+            base_offset_mode=base_offset_mode,
             anchor_output_mode=anchor_output_mode,
             print_detailed_logs=print_detailed_logs,
             confidence_threshold=confidence_threshold,
@@ -911,7 +911,7 @@ class BodyRatioMapperProportionTransfer:
         self._validate_anchor_output_shape(anchor_output, len(sorted_people), anchor_output_mode)
         return (changed_output, anchor_output)
 
-    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
+    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, base_offset_mode=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint)
 
@@ -927,7 +927,7 @@ class BodyRatioMapperProportionTransfer:
             use_torso_fk_for_foot=use_torso_fk_for_foot,
             best_neck_search=best_neck_search,
             final_offset_alignment=final_offset_alignment,
-            first_frame_offset_alignment=first_frame_offset_alignment,
+            base_offset_mode=base_offset_mode,
             anchor_output_mode=anchor_output_mode,
             print_detailed_logs=print_detailed_logs,
             confidence_threshold=confidence_threshold,
@@ -1115,7 +1115,7 @@ class BodyRatioMapperProportionTransfer:
         )
         return (changed_output, anchor_output)
 
-    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, config=None):
+    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, base_offset_mode=False, confidence_threshold=0.30, output_absolute_coordinates=True, config=None):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint) # Return tuple for both outputs
         
@@ -1159,7 +1159,7 @@ class BodyRatioMapperProportionTransfer:
             use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
             best_neck_search=best_neck_search,
             final_offset_alignment=final_offset_alignment,
-            first_frame_offset_alignment=first_frame_offset_alignment,
+            base_offset_mode=base_offset_mode,
             confidence_threshold=confidence_threshold,
             output_absolute_coordinates=output_absolute_coordinates,
         )
@@ -1559,7 +1559,7 @@ class BodyRatioMapperProportionTransfer:
         use_torso_fk_for_foot = runtime_cfg.use_torso_fk_for_foot
         best_neck_search = runtime_cfg.best_neck_search
         final_offset_alignment = runtime_cfg.final_offset_alignment
-        first_frame_offset_alignment = runtime_cfg.first_frame_offset_alignment
+        base_offset_mode = runtime_cfg.base_offset_mode
         output_absolute_coordinates = runtime_cfg.output_absolute_coordinates
         conf_thresh = runtime_cfg.confidence_threshold
 
@@ -2485,7 +2485,7 @@ class BodyRatioMapperProportionTransfer:
         base_offset_candidate = anchor_candidate
         base_offset_candidate_conf = anchor_candidate_conf
         base_offset_label = "anchor"
-        if first_frame_offset_alignment and len(results_vis) > 0:
+        if base_offset_mode and len(results_vis) > 0:
             selected_idx = -1
             for idx, frame in enumerate(results_vis):
                 cand = frame['bodies']['candidate']
@@ -2521,7 +2521,7 @@ class BodyRatioMapperProportionTransfer:
         global_base_offset = np.array([0.0, 0.0])
         if base_point is not None and ref_point is not None:
             global_base_offset = ref_point - base_point
-        print(f"[Global Offset] base={base_offset_label}, first_frame_offset_alignment={first_frame_offset_alignment}")
+        print(f"[Global Offset] base={base_offset_label}, base_offset_mode={base_offset_mode}")
 
         # --- Offset Stabilizer Constants (fixed over the whole video) ---
         def calc_body_metric(c):
