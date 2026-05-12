@@ -1265,30 +1265,6 @@ class BodyRatioMapperProportionTransfer:
                                 return None, c
                             return np.array([x, y], dtype=float), c
 
-                        def _dist(a, b):
-                            if a is None or b is None:
-                                return None
-                            return float(np.sqrt(np.sum((a - b) ** 2)))
-
-                        def _detect_swapped_hand_keys():
-                            # Returns True when source frame uses swapped hand keys:
-                            # real-left in hand_right_keypoints_2d and real-right in hand_left_keypoints_2d.
-                            left_key_root, _ = _hand_root_xy(person.get("hand_left_keypoints_2d", []))
-                            right_key_root, _ = _hand_root_xy(person.get("hand_right_keypoints_2d", []))
-                            if left_key_root is None or right_key_root is None:
-                                return True  # Keep legacy-safe fallback for this project.
-
-                            d_ll = _dist(left_key_root, left_wrist_xy)
-                            d_lr = _dist(left_key_root, right_wrist_xy)
-                            d_rr = _dist(right_key_root, right_wrist_xy)
-                            d_rl = _dist(right_key_root, left_wrist_xy)
-                            if None in (d_ll, d_lr, d_rr, d_rl):
-                                return True
-
-                            normal_score = d_ll + d_rr
-                            swapped_score = d_lr + d_rl
-                            return swapped_score < normal_score
-
                         # Normalize legacy input to pixel domain before anchor-hand injection.
                         if _is_normalized_domain():
                             for key in ("pose_keypoints_2d", "face_keypoints_2d", "hand_left_keypoints_2d", "hand_right_keypoints_2d", "foot_keypoints_2d"):
@@ -1316,12 +1292,10 @@ class BodyRatioMapperProportionTransfer:
 
                         left_flat = _to_hand_flat(left_hand_pts, conf_arr)
                         right_flat = _to_hand_flat(right_hand_pts, conf_arr)
-                        if _detect_swapped_hand_keys():
-                            person["hand_left_keypoints_2d"] = right_flat
-                            person["hand_right_keypoints_2d"] = left_flat
-                        else:
-                            person["hand_left_keypoints_2d"] = left_flat
-                            person["hand_right_keypoints_2d"] = right_flat
+                        # Keep this project's fixed upstream key convention:
+                        # real-left -> hand_right_keypoints_2d, real-right -> hand_left_keypoints_2d.
+                        person["hand_left_keypoints_2d"] = right_flat
+                        person["hand_right_keypoints_2d"] = left_flat
 
         def apply_best_neck_to_anchor_output(anchor_frames):
             if not best_neck_search:
