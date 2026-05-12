@@ -29,6 +29,8 @@ class RuntimeConfig:
     offset_stabilizer_x: bool = False
     best_hand_search: bool = True
     use_shoulder_fk_for_hand: bool = False
+    use_torso_fk_for_arm: bool = False
+    use_torso_fk_for_foot: bool = False
     best_neck_search: bool = False
     final_offset_alignment: bool = True
     first_frame_offset_alignment: bool = False
@@ -53,6 +55,8 @@ class BodyRatioMapperProportionTransfer:
                 "offset_stabilizer_x": ("BOOLEAN", {"default": False, "label_on": "Offset Stabilizer X ON", "label_off": "Offset Stabilizer X OFF"}),
                 "best_hand_search": ("BOOLEAN", {"default": True, "label_on": "Best Hand Search ON", "label_off": "Best Hand Search OFF"}),
                 "use_shoulder_fk_for_hand": ("BOOLEAN", {"default": False, "label_on": "Shoulder FK For Hand ON", "label_off": "Shoulder FK For Hand OFF", "tooltip": "Use shoulder FK to replace hand FK."}),
+                "use_torso_fk_for_arm": ("BOOLEAN", {"default": False, "label_on": "Torso FK For Arm ON", "label_off": "Torso FK For Arm OFF", "tooltip": "Use torso FK to replace upper/lower arm FK."}),
+                "use_torso_fk_for_foot": ("BOOLEAN", {"default": False, "label_on": "Torso FK For Foot ON", "label_off": "Torso FK For Foot OFF", "tooltip": "Use torso FK to replace foot edge1/edge2/edge3 FK."}),
                 "best_neck_search": ("BOOLEAN", {"default": False, "label_on": "Best Neck Search ON", "label_off": "Best Neck Search OFF"}),
                 "final_offset_alignment": ("BOOLEAN", {"default": True, "label_on": "Final Offset Align ON", "label_off": "Final Offset Align OFF"}),
                 "first_frame_offset_alignment": ("BOOLEAN", {"default": False, "label_on": "First-Frame Offset", "label_off": "Anchor-Frame Offset", "tooltip": "ON: align global offset by reference vs first frame. OFF: align by reference vs anchor frame."}),
@@ -108,6 +112,8 @@ class BodyRatioMapperProportionTransfer:
                               offset_stabilizer_x=False,
                               best_hand_search=True,
                               use_shoulder_fk_for_hand=False,
+                              use_torso_fk_for_arm=False,
+                              use_torso_fk_for_foot=False,
                               best_neck_search=False,
                               final_offset_alignment=True,
                               first_frame_offset_alignment=False,
@@ -124,6 +130,8 @@ class BodyRatioMapperProportionTransfer:
             offset_stabilizer_x=bool(offset_stabilizer_x),
             best_hand_search=bool(best_hand_search),
             use_shoulder_fk_for_hand=bool(use_shoulder_fk_for_hand),
+            use_torso_fk_for_arm=bool(use_torso_fk_for_arm),
+            use_torso_fk_for_foot=bool(use_torso_fk_for_foot),
             best_neck_search=bool(best_neck_search),
             final_offset_alignment=bool(final_offset_alignment),
             first_frame_offset_alignment=bool(first_frame_offset_alignment),
@@ -142,6 +150,8 @@ class BodyRatioMapperProportionTransfer:
                                 offset_stabilizer_x=False,
                                 best_hand_search=True,
                                 use_shoulder_fk_for_hand=False,
+                                use_torso_fk_for_arm=False,
+                                use_torso_fk_for_foot=False,
                                 best_neck_search=False,
                                 final_offset_alignment=True,
                                 first_frame_offset_alignment=False,
@@ -160,6 +170,8 @@ class BodyRatioMapperProportionTransfer:
             offset_stabilizer_x=offset_stabilizer_x,
             best_hand_search=best_hand_search,
             use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
+            use_torso_fk_for_arm=use_torso_fk_for_arm,
+            use_torso_fk_for_foot=use_torso_fk_for_foot,
             best_neck_search=best_neck_search,
             final_offset_alignment=final_offset_alignment,
             first_frame_offset_alignment=first_frame_offset_alignment,
@@ -898,7 +910,7 @@ class BodyRatioMapperProportionTransfer:
         self._validate_anchor_output_shape(anchor_output, len(sorted_people), anchor_output_mode)
         return (changed_output, anchor_output)
 
-    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
+    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint)
 
@@ -910,6 +922,8 @@ class BodyRatioMapperProportionTransfer:
             offset_stabilizer_x=offset_stabilizer_x,
             best_hand_search=best_hand_search,
             use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
+            use_torso_fk_for_arm=use_torso_fk_for_arm,
+            use_torso_fk_for_foot=use_torso_fk_for_foot,
             best_neck_search=best_neck_search,
             final_offset_alignment=final_offset_alignment,
             first_frame_offset_alignment=first_frame_offset_alignment,
@@ -1100,7 +1114,7 @@ class BodyRatioMapperProportionTransfer:
         )
         return (changed_output, anchor_output)
 
-    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, config=None):
+    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, config=None):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint) # Return tuple for both outputs
         
@@ -1566,6 +1580,8 @@ class BodyRatioMapperProportionTransfer:
         offset_stabilizer_x = runtime_cfg.offset_stabilizer_x
         best_hand_search = runtime_cfg.best_hand_search
         use_shoulder_fk_for_hand = runtime_cfg.use_shoulder_fk_for_hand
+        use_torso_fk_for_arm = runtime_cfg.use_torso_fk_for_arm
+        use_torso_fk_for_foot = runtime_cfg.use_torso_fk_for_foot
         best_neck_search = runtime_cfg.best_neck_search
         final_offset_alignment = runtime_cfg.final_offset_alignment
         first_frame_offset_alignment = runtime_cfg.first_frame_offset_alignment
@@ -2156,6 +2172,16 @@ class BodyRatioMapperProportionTransfer:
             fk_torso, fk_neck, fk_shoulder, fk_hip_width = scale_solver_external.extract_fk_values_part1_torso_neck(ref_candidate, anc_candidate)
             fk_upper_arm, fk_lower_arm, arm_ref_lock_to_long = scale_solver_external.extract_fk_values_part2_arms(ref_candidate, anc_candidate)
             fk_upper_leg, fk_lower_leg = scale_solver_external.extract_fk_values_part3_legs(ref_candidate, anc_candidate)
+
+            # Fallback: if ref has no valid leg keypoints (by confidence threshold), use torso FK instead of 1.0
+            ref_has_any_leg = any(
+                has_pt(ref_candidate[i]) and ref_candidate_conf[i] >= conf_thresh
+                for i in [8, 9, 10, 11, 12, 13]
+            )
+            if not ref_has_any_leg:
+                print(f"[Leg FK Fallback] No ref leg keypoints found. Using torso FK ({fk_torso:.3f}) for upper/lower leg.")
+                fk_upper_leg = fk_torso
+                fk_lower_leg = fk_torso
             part4_values = scale_solver_external.extract_fk_values_part4_hands_feet_face(
                 ref_candidate, ref_faces, ref_hands, ref_feet,
                 anc_candidate, anc_faces, anc_hands, anc_feet, hand_baseline
@@ -2175,6 +2201,19 @@ class BodyRatioMapperProportionTransfer:
             # Phase 2.5: Hand FK Anomaly Protection
             fk_hand = scale_solver_external.validate_hand_fk(fk_hand, fk_torso, fk_neck, fk_upper_arm, fk_lower_arm,
                                             fk_upper_leg, fk_lower_leg, fk_foot_edge1, fk_foot_edge2, fk_foot_edge3, fk_body_to_foot_ankle, fk_face_x, fk_face_y, fk_eye_width, logger=print)
+
+            # Optional mode: replace upper/lower arm FK with torso FK.
+            if use_torso_fk_for_arm:
+                print(f"[Arm FK Mode] Torso-driven arm FK enabled: upper_arm/lower_arm <- torso_fk ({fk_torso:.3f})")
+                fk_upper_arm = fk_torso
+                fk_lower_arm = fk_torso
+
+            # Optional mode: replace foot edge FK with torso FK.
+            if use_torso_fk_for_foot:
+                print(f"[Foot FK Mode] Torso-driven foot FK enabled: foot_edge1/2/3 <- torso_fk ({fk_torso:.3f})")
+                fk_foot_edge1 = fk_torso
+                fk_foot_edge2 = fk_torso
+                fk_foot_edge3 = fk_torso
 
             # Optional mode: replace hand FK with shoulder FK.
             if use_shoulder_fk_for_hand:
