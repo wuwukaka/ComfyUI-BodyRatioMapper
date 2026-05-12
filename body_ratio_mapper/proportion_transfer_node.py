@@ -22,10 +22,10 @@ from .core_modules import matrix_ops as matrix_ops_external
 @dataclass(frozen=True)
 class RuntimeConfig:
     """Runtime switches and thresholds for proportion processing."""
-    alignment_mode: bool = False
+    enable_rpca: bool = False
     hand_scaling: bool = True
     foot_scaling: bool = True
-    offset_stabilizer: bool = True
+    offset_stabilizer_y: bool = True
     offset_stabilizer_x: bool = False
     best_hand_search: bool = True
     use_shoulder_fk_for_hand: bool = False
@@ -48,11 +48,11 @@ class BodyRatioMapperProportionTransfer:
             "optional": {
                 "ref_pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Reference pose keypoint (Source of proportions)"}),
                 "manual_anchor_pose": ("POSE_KEYPOINT", {"tooltip": "(Optional) Override WSCS. Provide a perfect straight-facing pose to set the baseline proportions."}),
-                "alignment_mode": ("BOOLEAN", {"default": False, "label_on": "Alignment Mode", "label_off": "Standard Mode"}),
+                "enable_rpca": ("BOOLEAN", {"default": False, "label_on": "RPCA ON", "label_off": "RPCA OFF", "tooltip": "Enable global RPCA multiplier (anchor vs frame-0 scale correction)."}),
                 "hand_scaling": ("BOOLEAN", {"default": True, "label_on": "Hand Scaling ON", "label_off": "Hand Scaling OFF"}),
                 "foot_scaling": ("BOOLEAN", {"default": True, "label_on": "Foot Scaling ON", "label_off": "Foot Scaling OFF"}),
-                # offset_stabilizer: Y-axis stabilization. offset_stabilizer_x: X-axis stabilization. Both are independent.
-                "offset_stabilizer": ("BOOLEAN", {"default": True, "label_on": "Offset Stabilizer Y ON", "label_off": "Offset Stabilizer Y OFF"}),
+                # offset_stabilizer_y: Y-axis stabilization. offset_stabilizer_x: X-axis stabilization. Both are independent.
+                "offset_stabilizer_y": ("BOOLEAN", {"default": True, "label_on": "Offset Stabilizer Y ON", "label_off": "Offset Stabilizer Y OFF"}),
                 "offset_stabilizer_x": ("BOOLEAN", {"default": False, "label_on": "Offset Stabilizer X ON", "label_off": "Offset Stabilizer X OFF"}),
                 "best_hand_search": ("BOOLEAN", {"default": True, "label_on": "Best Hand Search ON", "label_off": "Best Hand Search OFF"}),
                 "use_shoulder_fk_for_hand": ("BOOLEAN", {"default": False, "label_on": "Shoulder FK For Hand ON", "label_off": "Shoulder FK For Hand OFF", "tooltip": "Use shoulder FK to replace hand FK."}),
@@ -106,10 +106,10 @@ class BodyRatioMapperProportionTransfer:
         }
 
     @staticmethod
-    def _build_runtime_config(alignment_mode=False,
+    def _build_runtime_config(enable_rpca=False,
                               hand_scaling=True,
                               foot_scaling=True,
-                              offset_stabilizer=True,
+                              offset_stabilizer_y=True,
                               offset_stabilizer_x=False,
                               best_hand_search=True,
                               use_shoulder_fk_for_hand=False,
@@ -124,10 +124,10 @@ class BodyRatioMapperProportionTransfer:
                               output_absolute_coordinates=True):
         """Build RuntimeConfig from node input values."""
         return RuntimeConfig(
-            alignment_mode=bool(alignment_mode),
+            enable_rpca=bool(enable_rpca),
             hand_scaling=bool(hand_scaling),
             foot_scaling=bool(foot_scaling),
-            offset_stabilizer=bool(offset_stabilizer),
+            offset_stabilizer_y=bool(offset_stabilizer_y),
             offset_stabilizer_x=bool(offset_stabilizer_x),
             best_hand_search=bool(best_hand_search),
             use_shoulder_fk_for_hand=bool(use_shoulder_fk_for_hand),
@@ -144,10 +144,10 @@ class BodyRatioMapperProportionTransfer:
 
     @staticmethod
     def _resolve_runtime_config(config=None,
-                                alignment_mode=False,
+                                enable_rpca=False,
                                 hand_scaling=True,
                                 foot_scaling=True,
-                                offset_stabilizer=True,
+                                offset_stabilizer_y=True,
                                 offset_stabilizer_x=False,
                                 best_hand_search=True,
                                 use_shoulder_fk_for_hand=False,
@@ -164,10 +164,10 @@ class BodyRatioMapperProportionTransfer:
         if config is not None:
             return config
         return BodyRatioMapperProportionTransfer._build_runtime_config(
-            alignment_mode=alignment_mode,
+            enable_rpca=enable_rpca,
             hand_scaling=hand_scaling,
             foot_scaling=foot_scaling,
-            offset_stabilizer=offset_stabilizer,
+            offset_stabilizer_y=offset_stabilizer_y,
             offset_stabilizer_x=offset_stabilizer_x,
             best_hand_search=best_hand_search,
             use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
@@ -911,15 +911,15 @@ class BodyRatioMapperProportionTransfer:
         self._validate_anchor_output_shape(anchor_output, len(sorted_people), anchor_output_mode)
         return (changed_output, anchor_output)
 
-    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
+    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint)
 
         runtime_cfg = self._resolve_runtime_config(
-            alignment_mode=alignment_mode,
+            enable_rpca=enable_rpca,
             hand_scaling=hand_scaling,
             foot_scaling=foot_scaling,
-            offset_stabilizer=offset_stabilizer,
+            offset_stabilizer_y=offset_stabilizer_y,
             offset_stabilizer_x=offset_stabilizer_x,
             best_hand_search=best_hand_search,
             use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
@@ -1115,7 +1115,7 @@ class BodyRatioMapperProportionTransfer:
         )
         return (changed_output, anchor_output)
 
-    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, alignment_mode=False, hand_scaling=True, foot_scaling=True, offset_stabilizer=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, config=None):
+    def _process_single(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, first_frame_offset_alignment=False, confidence_threshold=0.30, output_absolute_coordinates=True, config=None):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint) # Return tuple for both outputs
         
@@ -1150,10 +1150,10 @@ class BodyRatioMapperProportionTransfer:
 
         runtime_config = self._resolve_runtime_config(
             config=config,
-            alignment_mode=alignment_mode,
+            enable_rpca=enable_rpca,
             hand_scaling=hand_scaling,
             foot_scaling=foot_scaling,
-            offset_stabilizer=offset_stabilizer,
+            offset_stabilizer_y=offset_stabilizer_y,
             offset_stabilizer_x=offset_stabilizer_x,
             best_hand_search=best_hand_search,
             use_shoulder_fk_for_hand=use_shoulder_fk_for_hand,
@@ -1548,10 +1548,10 @@ class BodyRatioMapperProportionTransfer:
 
         results_vis = batch_pose_data
         runtime_cfg = self._resolve_runtime_config(config=config)
-        alignment_mode = runtime_cfg.alignment_mode
+        enable_rpca = runtime_cfg.enable_rpca
         hand_scaling = runtime_cfg.hand_scaling
         foot_scaling = runtime_cfg.foot_scaling
-        offset_stabilizer = runtime_cfg.offset_stabilizer
+        offset_stabilizer_y = runtime_cfg.offset_stabilizer_y
         offset_stabilizer_x = runtime_cfg.offset_stabilizer_x
         best_hand_search = runtime_cfg.best_hand_search
         use_shoulder_fk_for_hand = runtime_cfg.use_shoulder_fk_for_hand
@@ -2229,16 +2229,19 @@ class BodyRatioMapperProportionTransfer:
             global_rpca = calculate_global_rpca_external(
                 anc_candidate, anc_faces,
                 f0_candidate, f0_faces,
-                alignment_mode
+                enable_rpca
             )
 
             # Phase 2: Extract and assemble FK values (Ref vs Anchor)
             fk_pkg = build_fk_values(anc_candidate, anc_faces, anc_hands, anc_feet, hand_baseline)
 
             # Phase 3: Forge final scale constants (FK × RPCA)
-            final_scale_pkg = forge_final_scales_external(fk_pkg, global_rpca, alignment_mode)
+            final_scale_pkg = forge_final_scales_external(fk_pkg, global_rpca, enable_rpca)
 
-            print(f"[New Pipeline] Global RPCA: {global_rpca:.3f}")
+            if enable_rpca:
+                print(f"[New Pipeline] Global RPCA: {global_rpca:.3f}")
+            else:
+                print("[New Pipeline] RPCA disabled, multiplier=1.0")
             print(f"[New Pipeline] Final Scales: torso={final_scale_pkg['torso']:.3f}, neck={final_scale_pkg['neck']:.3f}, "
                   f"shoulder={final_scale_pkg['shoulder']:.3f}, "
                   f"hip={final_scale_pkg['hip_width']:.3f}, "
@@ -2540,11 +2543,11 @@ class BodyRatioMapperProportionTransfer:
 
         def build_stabilizer_components():
             """Build per-frame stabilizer compensation with unchanged ratio and fallback logic."""
-            stabilizer_shoulder_ratio = (fk_values['shoulder'] * global_rpca_multiplier) if offset_stabilizer else 1.0
+            stabilizer_shoulder_ratio = fk_values['shoulder'] * global_rpca_multiplier
             stabilizer_body_ratio = 1.0
             body_metric_ref = calc_body_metric(ref_candidate)
             body_metric_base = calc_body_metric(base_offset_candidate)
-            if offset_stabilizer and body_metric_ref is not None and body_metric_base is not None and body_metric_base > 1e-6:
+            if offset_stabilizer_y and body_metric_ref is not None and body_metric_base is not None and body_metric_base > 1e-6:
                 stabilizer_body_ratio = (body_metric_ref / body_metric_base) * global_rpca_multiplier
 
             anchor_stabilizer_point = get_stabilizer_point(base_offset_candidate, base_offset_candidate_conf)
@@ -2552,13 +2555,13 @@ class BodyRatioMapperProportionTransfer:
             stabilizer_point_cache = build_stabilizer_point_cache(batch_pose_data)
             raw_stabilizer_comps = []
             for curr_point in stabilizer_point_cache:
-                if (not offset_stabilizer and not offset_stabilizer_x) or anchor_stabilizer_point is None or curr_point is None:
+                if (not offset_stabilizer_y and not offset_stabilizer_x) or anchor_stabilizer_point is None or curr_point is None:
                     raw_stabilizer_comps.append(None)
                     continue
                 delta = curr_point - anchor_stabilizer_point
                 raw_stabilizer_comps.append(np.array([
                     ((stabilizer_shoulder_ratio - 1.0) * delta[0]) if offset_stabilizer_x else 0.0,
-                    ((stabilizer_body_ratio - 1.0) * delta[1]) if offset_stabilizer else 0.0,
+                    ((stabilizer_body_ratio - 1.0) * delta[1]) if offset_stabilizer_y else 0.0,
                 ]))
 
             return apply_bidirectional_interpolation(raw_stabilizer_comps)
@@ -2576,7 +2579,7 @@ class BodyRatioMapperProportionTransfer:
                 base_offset=base_offset,
                 frame_idx=frame_idx,
                 enable_final_offset_alignment=final_offset_alignment,
-                enable_offset_stabilizer=offset_stabilizer,
+                enable_stabilizer=(offset_stabilizer_y or offset_stabilizer_x),
                 final_stabilizer_comps=final_stabilizer_comps,
             )
 

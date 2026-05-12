@@ -11,16 +11,17 @@ Design goals:
 """
 
 
-def build_stabilized_offset(base_offset, frame_idx, enable_final_offset_alignment, enable_offset_stabilizer, final_stabilizer_comps):
+def build_stabilized_offset(base_offset, frame_idx, enable_final_offset_alignment, enable_stabilizer=False, final_stabilizer_comps=None):
     """
     Build the final per-frame global offset.
 
     Rule:
     - Base alignment offset is applied only when enable_final_offset_alignment is True.
     - Stabilizer compensation is added on top when enabled and index is valid.
+    - X/Y axis control is already baked into final_stabilizer_comps by the caller.
     """
     offset = base_offset.copy() if enable_final_offset_alignment else np.array([0.0, 0.0])
-    if enable_offset_stabilizer and 0 <= frame_idx < len(final_stabilizer_comps):
+    if enable_stabilizer and final_stabilizer_comps is not None and 0 <= frame_idx < len(final_stabilizer_comps):
         offset += final_stabilizer_comps[frame_idx]
     return offset
 

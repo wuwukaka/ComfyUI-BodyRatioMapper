@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def calculate_13_bone_global_rpca(anchor_candidate, anchor_faces, f0_candidate, f0_faces, alignment_mode=True):
+def calculate_13_bone_global_rpca(anchor_candidate, anchor_faces, f0_candidate, f0_faces, enable_rpca=True):
     """
     Compute the global RPCA multiplier from anchor frame vs frame-0 geometry.
 
@@ -13,9 +13,9 @@ def calculate_13_bone_global_rpca(anchor_candidate, anchor_faces, f0_candidate, 
 
     Notes:
     - This function is intentionally deterministic and independent of per-frame scaling loops.
-    - When alignment_mode is disabled, the multiplier is forced to 1.0.
+    - When enable_rpca is disabled, the multiplier is forced to 1.0.
     """
-    if not alignment_mode:
+    if not enable_rpca:
         return 1.0
 
     # Internal "point exists" rule follows the project-wide non-zero threshold.
@@ -84,18 +84,18 @@ def calculate_13_bone_global_rpca(anchor_candidate, anchor_faces, f0_candidate, 
     return 1.0
 
 
-def forge_final_scale_constants(fk_values, global_rpca_multiplier, alignment_mode=True):
+def forge_final_scale_constants(fk_values, global_rpca_multiplier, enable_rpca=True):
     """
     Build final per-part scales from FK values and global RPCA multiplier.
 
     Rule:
-    - alignment_mode=True  -> final_scale = fk * global_rpca_multiplier
-    - alignment_mode=False -> final_scale = fk * 1.0
+    - enable_rpca=True  -> final_scale = fk * global_rpca_multiplier
+    - enable_rpca=False -> final_scale = fk * 1.0
 
     Output keys are kept stable for downstream compatibility.
     """
     final_scales = {}
-    multiplier = global_rpca_multiplier if alignment_mode else 1.0
+    multiplier = global_rpca_multiplier if enable_rpca else 1.0
 
     # Core body segments.
     final_scales['torso'] = fk_values['torso'] * multiplier
