@@ -51,7 +51,8 @@ class BodyRatioMapperProportionTransfer:
                 "alignment_mode": ("BOOLEAN", {"default": False, "label_on": "Alignment Mode", "label_off": "Standard Mode"}),
                 "hand_scaling": ("BOOLEAN", {"default": True, "label_on": "Hand Scaling ON", "label_off": "Hand Scaling OFF"}),
                 "foot_scaling": ("BOOLEAN", {"default": True, "label_on": "Foot Scaling ON", "label_off": "Foot Scaling OFF"}),
-                "offset_stabilizer": ("BOOLEAN", {"default": True, "label_on": "Offset Stabilizer ON", "label_off": "Offset Stabilizer OFF"}),
+                # offset_stabilizer: Y-axis stabilization. offset_stabilizer_x: X-axis stabilization. Both are independent.
+                "offset_stabilizer": ("BOOLEAN", {"default": True, "label_on": "Offset Stabilizer Y ON", "label_off": "Offset Stabilizer Y OFF"}),
                 "offset_stabilizer_x": ("BOOLEAN", {"default": False, "label_on": "Offset Stabilizer X ON", "label_off": "Offset Stabilizer X OFF"}),
                 "best_hand_search": ("BOOLEAN", {"default": True, "label_on": "Best Hand Search ON", "label_off": "Best Hand Search OFF"}),
                 "use_shoulder_fk_for_hand": ("BOOLEAN", {"default": False, "label_on": "Shoulder FK For Hand ON", "label_off": "Shoulder FK For Hand OFF", "tooltip": "Use shoulder FK to replace hand FK."}),
@@ -2551,13 +2552,13 @@ class BodyRatioMapperProportionTransfer:
             stabilizer_point_cache = build_stabilizer_point_cache(batch_pose_data)
             raw_stabilizer_comps = []
             for curr_point in stabilizer_point_cache:
-                if not offset_stabilizer or anchor_stabilizer_point is None or curr_point is None:
+                if (not offset_stabilizer and not offset_stabilizer_x) or anchor_stabilizer_point is None or curr_point is None:
                     raw_stabilizer_comps.append(None)
                     continue
                 delta = curr_point - anchor_stabilizer_point
                 raw_stabilizer_comps.append(np.array([
                     ((stabilizer_shoulder_ratio - 1.0) * delta[0]) if offset_stabilizer_x else 0.0,
-                    (stabilizer_body_ratio - 1.0) * delta[1]
+                    ((stabilizer_body_ratio - 1.0) * delta[1]) if offset_stabilizer else 0.0,
                 ]))
 
             return apply_bidirectional_interpolation(raw_stabilizer_comps)
