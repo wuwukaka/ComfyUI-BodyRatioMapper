@@ -555,7 +555,9 @@ class BodyRatioMapperProportionTransfer:
 
     def _ref_person_passes_core_rule(self, person, conf_thresh):
         pose = self._body18_triplets(person)
-        body_core_ok = self._all_conf_ge(pose, [1, 2, 5, 8, 11], conf_thresh)
+        core_upper_ok = self._all_conf_ge(pose, [1, 2, 5], conf_thresh)
+        hip_ok = self._all_conf_ge(pose, [8], conf_thresh) or self._all_conf_ge(pose, [11], conf_thresh)
+        body_core_ok = core_upper_ok and hip_ok
         head5_ok = self._all_conf_ge(pose, [0, 14, 15, 16, 17], conf_thresh)
         right_arm_ok = self._all_conf_ge(pose, [2, 3, 4], conf_thresh)
         left_arm_ok = self._all_conf_ge(pose, [5, 6, 7], conf_thresh)
@@ -719,24 +721,73 @@ class BodyRatioMapperProportionTransfer:
             return np.array([x, y], dtype=float)
         return None
 
+    def _person_reference_point_with_mode(self, person, conf_thresh, state):
+        """
+        Nose-first reference point with hysteresis:
+        - default uses nose
+        - if nose missing for >5 consecutive frames, switch to neck mode
+        - once nose becomes available for >=3 consecutive frames, switch back to nose mode
+        Fallback point is shoulder midpoint when current mode point is unavailable.
+        """
+        pose = self._body18_triplets(person)
+
+        def get_pt_if_conf_ok(i):
+            if i >= len(pose) or len(pose[i]) <= 2:
+                return None
+            if float(pose[i][2]) < conf_thresh:
+                return None
+            return np.array([float(pose[i][0]), float(pose[i][1])], dtype=float)
+
+        nose_pt = get_pt_if_conf_ok(0)
+        neck_pt = get_pt_if_conf_ok(1)
+        sh_l = get_pt_if_conf_ok(2)
+        sh_r = get_pt_if_conf_ok(5)
+        shoulder_mid = ((sh_l + sh_r) * 0.5) if (sh_l is not None and sh_r is not None) else None
+
+        if nose_pt is None:
+            state["nose_miss_streak"] = int(state.get("nose_miss_streak", 0)) + 1
+            state["nose_recover_streak"] = 0
+            if state["nose_miss_streak"] > 5:
+                state["ref_mode"] = "neck"
+        else:
+            state["nose_miss_streak"] = 0
+            state["nose_recover_streak"] = int(state.get("nose_recover_streak", 0)) + 1
+            if state.get("ref_mode", "nose") == "neck" and state["nose_recover_streak"] >= 3:
+                state["ref_mode"] = "nose"
+
+        mode = state.get("ref_mode", "nose")
+        if mode == "nose" and nose_pt is not None:
+            return nose_pt
+        if mode == "neck" and neck_pt is not None:
+            return neck_pt
+        if mode == "nose" and neck_pt is not None:
+            return neck_pt
+        if mode == "neck" and nose_pt is not None:
+            return nose_pt
+        return shoulder_mid
+
     @staticmethod
     def _pixel_match_threshold(canvas_w, canvas_h, ratio=0.05):
         return float(ratio) * float(np.sqrt(float(canvas_w) * float(canvas_w) + float(canvas_h) * float(canvas_h)))
 
-    def _stabilize_tracks_after_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05):
+    def _stabilize_tracks_after_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05, assignment_map=None):
         if len(tracks) == 0:
-            return tracks
+            return tracks, assignment_map
         if full_idx < 0 or full_idx >= len(frames):
-            return tracks
+            return tracks, assignment_map
 
         n = len(tracks)
         id_people = self._sorted_people_for_frame(frames[full_idx], conf_thresh)
         if len(id_people) < n:
-            return tracks
+            return tracks, assignment_map
+
+        if assignment_map is None:
+            assignment_map = [[-1 for _ in range(len(frames))] for _ in range(n)]
 
         # Lock IDs at t* (left-to-right order at t*).
         last_valid_points = [None] * n
         last_valid_frame_idx = [full_idx] * n
+        ref_states = [{"ref_mode": "nose", "nose_miss_streak": 0, "nose_recover_streak": 0} for _ in range(n)]
         for pi in range(n):
             p = self._clone_person_fast(id_people[pi])
             tracks[pi][full_idx] = {
@@ -744,7 +795,8 @@ class BodyRatioMapperProportionTransfer:
                 "canvas_width": frames[full_idx]["canvas_width"],
                 "canvas_height": frames[full_idx]["canvas_height"],
             }
-            last_valid_points[pi] = self._person_reference_point(p, conf_thresh)
+            last_valid_points[pi] = self._person_reference_point_with_mode(p, conf_thresh, ref_states[pi])
+            assignment_map[pi][full_idx] = pi
 
         # Keep ID order stable for t*+1 ... end by nearest matching to previous valid point.
         for fi in range(full_idx + 1, len(frames)):
@@ -753,7 +805,6 @@ class BodyRatioMapperProportionTransfer:
             canvas_h = frame["canvas_height"]
             tau_px = self._pixel_match_threshold(canvas_w, canvas_h, ratio=ratio)
             candidates = self._sorted_people_for_frame(frame, conf_thresh)
-            cand_points = [self._person_reference_point(c, conf_thresh) for c in candidates]
             used = set()
 
             for pi in range(n):
@@ -764,7 +815,7 @@ class BodyRatioMapperProportionTransfer:
                     for cj in range(len(candidates)):
                         if cj in used:
                             continue
-                        cp = cand_points[cj]
+                        cp = self._person_reference_point_with_mode(candidates[cj], conf_thresh, ref_states[pi].copy())
                         if cp is None:
                             continue
                         d = float(np.sqrt(np.sum((cp - ref_pt) ** 2)))
@@ -784,35 +835,42 @@ class BodyRatioMapperProportionTransfer:
                         "canvas_width": canvas_w,
                         "canvas_height": canvas_h,
                     }
-                    new_pt = cand_points[best_j]
+                    new_pt = self._person_reference_point_with_mode(chosen, conf_thresh, ref_states[pi])
                     if new_pt is not None:
                         last_valid_points[pi] = new_pt
                         last_valid_frame_idx[pi] = fi
+                    assignment_map[pi][fi] = best_j
                 else:
                     tracks[pi][fi] = {
                         "people": [self._build_zero_person_openpose()],
                         "canvas_width": canvas_w,
                         "canvas_height": canvas_h,
                     }
-        return tracks
+                    assignment_map[pi][fi] = -1
+        return tracks, assignment_map
 
-    def _stabilize_tracks_before_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05):
+    def _stabilize_tracks_before_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05, assignment_map=None):
         if len(tracks) == 0:
-            return tracks
+            return tracks, assignment_map
         if full_idx <= 0 or full_idx >= len(frames):
-            return tracks
+            return tracks, assignment_map
 
         n = len(tracks)
         id_people = self._sorted_people_for_frame(frames[full_idx], conf_thresh)
         if len(id_people) < n:
-            return tracks
+            return tracks, assignment_map
+
+        if assignment_map is None:
+            assignment_map = [[-1 for _ in range(len(frames))] for _ in range(n)]
 
         # Lock IDs at t* and track nearest points backward.
         last_valid_points = [None] * n
         last_valid_frame_idx = [full_idx] * n
+        ref_states = [{"ref_mode": "nose", "nose_miss_streak": 0, "nose_recover_streak": 0} for _ in range(n)]
         for pi in range(n):
             p = self._clone_person_fast(id_people[pi])
-            last_valid_points[pi] = self._person_reference_point(p, conf_thresh)
+            last_valid_points[pi] = self._person_reference_point_with_mode(p, conf_thresh, ref_states[pi])
+            assignment_map[pi][full_idx] = pi
 
         # Keep ID order stable for 0 ... t*-1 by reverse nearest matching to next valid point.
         for fi in range(full_idx - 1, -1, -1):
@@ -821,7 +879,6 @@ class BodyRatioMapperProportionTransfer:
             canvas_h = frame["canvas_height"]
             tau_px = self._pixel_match_threshold(canvas_w, canvas_h, ratio=ratio)
             candidates = self._sorted_people_for_frame(frame, conf_thresh)
-            cand_points = [self._person_reference_point(c, conf_thresh) for c in candidates]
             used = set()
 
             for pi in range(n):
@@ -832,7 +889,7 @@ class BodyRatioMapperProportionTransfer:
                     for cj in range(len(candidates)):
                         if cj in used:
                             continue
-                        cp = cand_points[cj]
+                        cp = self._person_reference_point_with_mode(candidates[cj], conf_thresh, ref_states[pi].copy())
                         if cp is None:
                             continue
                         d = float(np.sqrt(np.sum((cp - ref_pt) ** 2)))
@@ -852,15 +909,76 @@ class BodyRatioMapperProportionTransfer:
                         "canvas_width": canvas_w,
                         "canvas_height": canvas_h,
                     }
-                    new_pt = cand_points[best_j]
+                    new_pt = self._person_reference_point_with_mode(chosen, conf_thresh, ref_states[pi])
                     if new_pt is not None:
                         last_valid_points[pi] = new_pt
                         last_valid_frame_idx[pi] = fi
+                    assignment_map[pi][fi] = best_j
                 else:
                     tracks[pi][fi] = {
                         "people": [self._build_zero_person_openpose()],
                         "canvas_width": canvas_w,
                         "canvas_height": canvas_h,
+                    }
+                    assignment_map[pi][fi] = -1
+        return tracks, assignment_map
+
+    def _apply_majority_id_smoothing(self, tracks, frames, assignment_map, conf_thresh):
+        if not tracks or assignment_map is None:
+            return tracks
+        n = len(tracks)
+        total_frames = len(frames)
+        voted_map = [[-1 for _ in range(total_frames)] for _ in range(n)]
+
+        for pi in range(n):
+            for fi in range(total_frames):
+                start = max(0, fi - 7)
+                end = min(total_frames - 1, fi + 8)
+                counts = {}
+                for k in range(start, end + 1):
+                    cand_idx = assignment_map[pi][k]
+                    if cand_idx is None or cand_idx < 0:
+                        continue
+                    counts[cand_idx] = counts.get(cand_idx, 0) + 1
+                if not counts:
+                    voted_map[pi][fi] = assignment_map[pi][fi]
+                else:
+                    voted_map[pi][fi] = max(counts.items(), key=lambda x: x[1])[0]
+
+        for fi in range(total_frames):
+            frame = frames[fi]
+            candidates = self._sorted_people_for_frame(frame, conf_thresh)
+            used = set()
+            pending = []
+
+            for pi in range(n):
+                want = voted_map[pi][fi]
+                if want is not None and want >= 0 and want < len(candidates) and want not in used:
+                    chosen = self._clone_person_fast(candidates[want])
+                    tracks[pi][fi] = {
+                        "people": [chosen],
+                        "canvas_width": frame["canvas_width"],
+                        "canvas_height": frame["canvas_height"],
+                    }
+                    used.add(want)
+                else:
+                    pending.append(pi)
+
+            for pi in pending:
+                fallback = assignment_map[pi][fi]
+                if fallback is not None and fallback >= 0 and fallback < len(candidates) and fallback not in used:
+                    chosen = self._clone_person_fast(candidates[fallback])
+                    tracks[pi][fi] = {
+                        "people": [chosen],
+                        "canvas_width": frame["canvas_width"],
+                        "canvas_height": frame["canvas_height"],
+                    }
+                    used.add(fallback)
+                else:
+                    tracks[pi][fi] = {
+                        "people": [self._build_zero_person_openpose()],
+                        "canvas_width": frame["canvas_width"],
+                        "canvas_height": frame["canvas_height"],
                     }
         return tracks
 
@@ -1030,11 +1148,15 @@ class BodyRatioMapperProportionTransfer:
         full_valid_frame_idx = self._find_first_full_valid_frame_index(
             pose_keypoint, len(candidate_tracks), conf_thresh
         )
-        candidate_tracks = self._stabilize_tracks_before_t_star(
-            candidate_tracks, pose_keypoint, full_valid_frame_idx, conf_thresh, ratio=0.08
+        assignment_map = [[-1 for _ in range(len(pose_keypoint))] for _ in range(len(candidate_tracks))]
+        candidate_tracks, assignment_map = self._stabilize_tracks_before_t_star(
+            candidate_tracks, pose_keypoint, full_valid_frame_idx, conf_thresh, ratio=0.08, assignment_map=assignment_map
         )
-        candidate_tracks = self._stabilize_tracks_after_t_star(
-            candidate_tracks, pose_keypoint, full_valid_frame_idx, conf_thresh, ratio=0.08
+        candidate_tracks, assignment_map = self._stabilize_tracks_after_t_star(
+            candidate_tracks, pose_keypoint, full_valid_frame_idx, conf_thresh, ratio=0.08, assignment_map=assignment_map
+        )
+        candidate_tracks = self._apply_majority_id_smoothing(
+            candidate_tracks, pose_keypoint, assignment_map, conf_thresh
         )
 
         manual_people_filtered = []
