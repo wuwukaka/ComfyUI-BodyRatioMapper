@@ -254,9 +254,13 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     ankle_angle, ankle_pair = pair_angle_and_mask(10, 13)
     wrist_angle_line, wrist_pair = pair_angle_and_mask(4, 7)
     elbow_angle_line, elbow_pair = pair_angle_and_mask(3, 6)
+    knee_angle_line, knee_pair = pair_angle_and_mask(9, 12)
+    shoulder_angle_line, shoulder_pair = pair_angle_and_mask(2, 5)
     is_ankle_tilt_excessive_arr = ankle_pair & (ankle_angle > 45.0)
     is_wrist_tilt_excessive_arr = wrist_pair & (wrist_angle_line > 35.0)
     is_elbow_tilt_excessive_arr = elbow_pair & (elbow_angle_line > 35.0)
+    is_knee_tilt_excessive_arr = knee_pair & (knee_angle_line > 15.0)
+    is_shoulder_tilt_excessive_arr = shoulder_pair & (shoulder_angle_line > 15.0)
 
     # wrist between shoulder and elbow on Y-axis => folding cue
     r_fold_has = pt_present[:, 2] & pt_present[:, 3] & pt_present[:, 4]
@@ -280,6 +284,36 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     min_ear_nose = np.minimum(dist_ear_r_nose, dist_ear_l_nose)
     is_ear_nose_ratio_excessive_arr = ear_nose_has & (min_ear_nose > 1e-6) & ((max_ear_nose / min_ear_nose) > 1.26)
 
+    # Reject when nose is above the ear line (interpolated Y at nose X) and nose-to-ear angle deviates from ear line by >10°.
+    ear_raw_dx = x[:, 17] - x[:, 16]
+    ear_line_y_at_nose = np.where(np.abs(ear_raw_dx) > 1e-6, y[:, 16] + (y[:, 17] - y[:, 16]) * (x[:, 0] - x[:, 16]) / ear_raw_dx, np.minimum(y[:, 16], y[:, 17]))
+    nose_above_ears = pt_present[:, 0] & pt_present[:, 16] & pt_present[:, 17] & (y[:, 0] < ear_line_y_at_nose)
+    ear_line_dx = np.abs(x[:, 17] - x[:, 16])
+    ear_line_dy = np.abs(y[:, 17] - y[:, 16])
+    ear_line_angle = np.degrees(np.arctan2(ear_line_dy, np.maximum(ear_line_dx, 1e-6)))
+    nose_ear_r_dx = np.abs(x[:, 16] - x[:, 0])
+    nose_ear_r_dy = np.abs(y[:, 16] - y[:, 0])
+    nose_ear_r_angle = np.degrees(np.arctan2(nose_ear_r_dy, np.maximum(nose_ear_r_dx, 1e-6)))
+    nose_ear_l_dx = np.abs(x[:, 17] - x[:, 0])
+    nose_ear_l_dy = np.abs(y[:, 17] - y[:, 0])
+    nose_ear_l_angle = np.degrees(np.arctan2(nose_ear_l_dy, np.maximum(nose_ear_l_dx, 1e-6)))
+    is_nose_above_ears_tilted_arr = nose_above_ears & ((np.abs(nose_ear_r_angle - ear_line_angle) > 10.0) | (np.abs(nose_ear_l_angle - ear_line_angle) > 10.0))
+    is_ear_line_tilt_excessive_arr = ears_pair & (ear_line_angle > 25.0)
+
+    # Reject when left/right body segment ratio exceeds 1.24 (torso, upper leg, lower leg).
+    def lr_ratio_mask(i1, i2, j1, j2):
+        has = pt_present[:, i1] & pt_present[:, i2] & pt_present[:, j1] & pt_present[:, j2]
+        d_left = pair_dist(i1, i2)
+        d_right = pair_dist(j1, j2)
+        max_d = np.maximum(d_left, d_right)
+        min_d = np.minimum(d_left, d_right)
+        return has & (min_d > 1e-6) & ((max_d / min_d) > 1.24)
+
+    is_torso_ratio_excessive_arr = lr_ratio_mask(1, 11, 1, 8)
+    is_upper_leg_ratio_excessive_arr = lr_ratio_mask(11, 12, 8, 9)
+    is_lower_leg_ratio_excessive_arr = lr_ratio_mask(12, 13, 9, 10)
+    is_body_ratio_excessive_arr = is_torso_ratio_excessive_arr | is_upper_leg_ratio_excessive_arr | is_lower_leg_ratio_excessive_arr
+
     common_hard_reject = (
         is_ankle_tilt_excessive_arr
         | is_wrist_tilt_excessive_arr
@@ -288,6 +322,11 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
         | are_ears_above_same_side_eyes_arr
         | is_ear_eye_tilt_ratio_excessive_arr
         | is_ear_nose_ratio_excessive_arr
+        | is_nose_above_ears_tilted_arr
+        | is_ear_line_tilt_excessive_arr
+        | is_knee_tilt_excessive_arr
+        | is_shoulder_tilt_excessive_arr
+        | is_body_ratio_excessive_arr
     )
 
     has_shoulders = pt_present[:, 2] & pt_present[:, 5]
