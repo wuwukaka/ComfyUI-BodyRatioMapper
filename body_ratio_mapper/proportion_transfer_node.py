@@ -928,8 +928,9 @@ class BodyRatioMapperProportionTransfer:
             return tracks
         n = len(tracks)
         total_frames = len(frames)
-        voted_map = [[-1 for _ in range(total_frames)] for _ in range(n)]
 
+        # Phase 1: Compute voted_map as fallback preference (existing logic).
+        voted_map = [[-1 for _ in range(total_frames)] for _ in range(n)]
         for pi in range(n):
             for fi in range(total_frames):
                 start = max(0, fi - 7)
@@ -945,13 +946,98 @@ class BodyRatioMapperProportionTransfer:
                 else:
                     voted_map[pi][fi] = max(counts.items(), key=lambda x: x[1])[0]
 
+        # Phase 2: Build per-frame candidate reference points.
+        cand_ref_pts = []
+        for fi in range(total_frames):
+            cands = self._sorted_people_for_frame(frames[fi], conf_thresh)
+            pts = []
+            for c in cands:
+                pts.append(self._person_reference_point(c, conf_thresh))
+            cand_ref_pts.append(pts)
+
+        # Phase 3: Recover per-track locked positions from stabilizer results.
+        locked_pts = [[None] * total_frames for _ in range(n)]
+
+        t_star = -1
+        for fi in range(total_frames):
+            all_locked = all(assignment_map[pi][fi] >= 0 for pi in range(n))
+            if all_locked:
+                t_star = fi
+                break
+
+        if t_star >= 0:
+            cands_t = self._sorted_people_for_frame(frames[t_star], conf_thresh)
+            for pi in range(n):
+                idx = assignment_map[pi][t_star]
+                if 0 <= idx < len(cand_ref_pts[t_star]):
+                    locked_pts[pi][t_star] = cand_ref_pts[t_star][idx]
+
+            # Walk forward from t_star.
+            for pi in range(n):
+                for fi in range(t_star + 1, total_frames):
+                    idx = assignment_map[pi][fi]
+                    if idx >= 0 and idx < len(cand_ref_pts[fi]) and cand_ref_pts[fi][idx] is not None:
+                        locked_pts[pi][fi] = cand_ref_pts[fi][idx]
+                    else:
+                        locked_pts[pi][fi] = locked_pts[pi][fi - 1]
+
+            # Walk backward from t_star.
+            for pi in range(n):
+                for fi in range(t_star - 1, -1, -1):
+                    idx = assignment_map[pi][fi]
+                    if idx >= 0 and idx < len(cand_ref_pts[fi]) and cand_ref_pts[fi][idx] is not None:
+                        locked_pts[pi][fi] = cand_ref_pts[fi][idx]
+                    else:
+                        locked_pts[pi][fi] = locked_pts[pi][fi + 1]
+
+        # Phase 4: Distance-based greedy assignment per frame.
         for fi in range(total_frames):
             frame = frames[fi]
             candidates = self._sorted_people_for_frame(frame, conf_thresh)
             used = set()
-            pending = []
 
+            # Separate tracks into those with stabilizer assignments and empty ones.
+            non_empty = []
+            empty_tracks = []
             for pi in range(n):
+                if assignment_map[pi][fi] < 0:
+                    empty_tracks.append(pi)
+                else:
+                    non_empty.append(pi)
+
+            # Distance-based greedy matching for non-empty tracks.
+            pairs = []
+            for pi in non_empty:
+                lp = locked_pts[pi][fi]
+                if lp is None:
+                    continue
+                for cj in range(len(candidates)):
+                    if cj in used:
+                        continue
+                    cp = cand_ref_pts[fi][cj]
+                    if cp is None:
+                        continue
+                    d = float(np.sqrt(np.sum((cp - lp) ** 2)))
+                    pairs.append((d, pi, cj))
+
+            pairs.sort(key=lambda x: x[0])
+            matched_tracks = set()
+            for d, pi, cj in pairs:
+                if pi in matched_tracks or cj in used:
+                    continue
+                chosen = self._clone_person_fast(candidates[cj])
+                tracks[pi][fi] = {
+                    "people": [chosen],
+                    "canvas_width": frame["canvas_width"],
+                    "canvas_height": frame["canvas_height"],
+                }
+                used.add(cj)
+                matched_tracks.add(pi)
+
+            # Fallback: tracks not matched by distance use voted_map.
+            for pi in non_empty:
+                if pi in matched_tracks:
+                    continue
                 want = voted_map[pi][fi]
                 if want is not None and want >= 0 and want < len(candidates) and want not in used:
                     chosen = self._clone_person_fast(candidates[want])
@@ -962,24 +1048,20 @@ class BodyRatioMapperProportionTransfer:
                     }
                     used.add(want)
                 else:
-                    pending.append(pi)
-
-            for pi in pending:
-                fallback = assignment_map[pi][fi]
-                if fallback is not None and fallback >= 0 and fallback < len(candidates) and fallback not in used:
-                    chosen = self._clone_person_fast(candidates[fallback])
-                    tracks[pi][fi] = {
-                        "people": [chosen],
-                        "canvas_width": frame["canvas_width"],
-                        "canvas_height": frame["canvas_height"],
-                    }
-                    used.add(fallback)
-                else:
                     tracks[pi][fi] = {
                         "people": [self._build_zero_person_openpose()],
                         "canvas_width": frame["canvas_width"],
                         "canvas_height": frame["canvas_height"],
                     }
+
+            # Preserve empty frames: stabilizer marked this person absent.
+            for pi in empty_tracks:
+                tracks[pi][fi] = {
+                    "people": [self._build_zero_person_openpose()],
+                    "canvas_width": frame["canvas_width"],
+                    "canvas_height": frame["canvas_height"],
+                }
+
         return tracks
 
     def _build_anchor_output(self, anchor_people, ref_frame, mode):
