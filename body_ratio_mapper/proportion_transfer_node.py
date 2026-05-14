@@ -2136,13 +2136,22 @@ class BodyRatioMapperProportionTransfer:
         anchor_idx = 0 # Initialize anchor_idx for safe return
         # Only run auto WSCS if manual override is not present or invalid.
         if not is_manual_anchor_valid:
-            anchor_idx, _, _, _, _, _ = select_wscs_anchor(
+            anchor_idx, anchor_wscs_score, found_perfect, found_degraded, level1_scores, level2_scores = select_wscs_anchor(
                 batch_pose_data=batch_pose_data,
                 conf_thresh=conf_thresh,
                 has_pt=has_pt,
                 get_dist=get_dist,
                 logger=print,
             )
+            # Compute anchor WSCS percentile among valid frames.
+            active_scores = level1_scores if found_perfect else (level2_scores if found_degraded else [])
+            if active_scores:
+                all_scores = sorted([s for _, s in active_scores], reverse=True)
+                rank = sum(1 for s in all_scores if s >= anchor_wscs_score)
+                percentile = (rank / len(all_scores)) * 100.0
+                print(f"[Anchor] Selected frame idx={anchor_idx}, WSCS score={anchor_wscs_score:.4f}, top {percentile:.1f}% (rank {rank}/{len(all_scores)})")
+            else:
+                print(f"[Anchor] Selected frame idx={anchor_idx}, WSCS score={anchor_wscs_score:.4f}")
             anchor_candidate, auto_candidate_conf, auto_faces, _, auto_hands, _, auto_feet, _ = resolve_auto_anchor_data(anchor_idx)
         # ========== Scale Constants ==========
         # Extract anchor frame data

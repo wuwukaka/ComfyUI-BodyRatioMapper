@@ -170,7 +170,7 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     # torso height, shoulder width, and ear width boost the score.
     # Ear width has the highest gain to favor frontal, less-foreshortened heads.
     def compute_base_score_geom(h_torso, w_shoulder, w_ear, h_neck_nose):
-        return (h_torso * 1.5) + (w_shoulder * 1.0) + (w_ear * 5.0) + (h_neck_nose * 10.0)
+        return (h_torso * 1.5) + (w_shoulder * 3.0) + (w_ear * 8.0) + (h_neck_nose * 10.0)
 
     # Shared penalty score:
     # asymmetry/level/centering penalties for shoulders, arms, legs, and facial alignment.
@@ -272,6 +272,14 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     ears_angle, ears_pair = pair_angle_and_mask(16, 17)
     is_ear_eye_tilt_ratio_excessive_arr = eyes_pair & ears_pair & (ears_angle > 15.0) & (ears_angle > (1.7 * eyes_angle))
 
+    # Reject when ear-to-nose distances are too asymmetric (ratio > 1.2).
+    ear_nose_has = pt_present[:, 0] & pt_present[:, 16] & pt_present[:, 17]
+    dist_ear_r_nose = np.sqrt((x[:, 16] - x[:, 0]) ** 2 + (y[:, 16] - y[:, 0]) ** 2)
+    dist_ear_l_nose = np.sqrt((x[:, 17] - x[:, 0]) ** 2 + (y[:, 17] - y[:, 0]) ** 2)
+    max_ear_nose = np.maximum(dist_ear_r_nose, dist_ear_l_nose)
+    min_ear_nose = np.minimum(dist_ear_r_nose, dist_ear_l_nose)
+    is_ear_nose_ratio_excessive_arr = ear_nose_has & (min_ear_nose > 1e-6) & ((max_ear_nose / min_ear_nose) > 1.26)
+
     common_hard_reject = (
         is_ankle_tilt_excessive_arr
         | is_wrist_tilt_excessive_arr
@@ -279,6 +287,7 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
         | is_wrist_folded_arr
         | are_ears_above_same_side_eyes_arr
         | is_ear_eye_tilt_ratio_excessive_arr
+        | is_ear_nose_ratio_excessive_arr
     )
 
     has_shoulders = pt_present[:, 2] & pt_present[:, 5]
@@ -289,7 +298,7 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     mid_hip_y = (y[:, 8] + y[:, 11]) * 0.5
     h_torso = np.where(has_shoulders & has_hips, np.sqrt((mid_sh_x - mid_hip_x) ** 2 + (mid_sh_y - mid_hip_y) ** 2), 0.0)
 
-    w_shoulder = pair_dist(2, 5)
+    w_shoulder = np.where(pt_present[:, 2] & pt_present[:, 5], np.abs(x[:, 2] - x[:, 5]), 0.0)
     h_neck_nose = np.where(pt_present[:, 1] & pt_present[:, 0], np.abs(y[:, 1] - y[:, 0]), 0.0)
     dist_neck_r = np.where(pt_present[:, 1] & pt_present[:, 2], pair_dist(1, 2), 0.0)
     dist_neck_l = np.where(pt_present[:, 1] & pt_present[:, 5], pair_dist(1, 5), 0.0)
@@ -332,8 +341,8 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     p_wrist_angle = np.where(wrist_pair, wrist_angle_line, 0.0)
     p_body_ankle_angle = np.where(ankle_pair, ankle_angle, 0.0)
 
-    w_ear = np.where(pt_present[:, 16] & pt_present[:, 17], pair_dist(16, 17), 0.0)
-    score_geom_arr = (h_torso * 1.5) + (w_shoulder * 1.0) + (w_ear * 5.0) + (h_neck_nose * 10.0)
+    w_ear = np.where(pt_present[:, 16] & pt_present[:, 17], np.abs(x[:, 16] - x[:, 17]), 0.0)
+    score_geom_arr = (h_torso * 1.5) + (w_shoulder * 3.0) + (w_ear * 8.0) + (h_neck_nose * 10.0)
     score_penalty_arr = (
         (p_sh_asym * 9.5) +
         (p_elbow_level * 12.5) + (p_wrist_level * 14.0) +
@@ -649,4 +658,29 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     anchor_idx, best_score, found_perfect_frame, found_degraded_frame, level1_scores, level2_scores = run_auto_anchor_search()
     valid_scores_list = select_wscs_scores_for_z_filter(found_perfect_frame, level1_scores, found_degraded_frame, level2_scores)
     anchor_idx = run_z_axis_filter(valid_scores_list, anchor_idx)
+    # Always re-read the WSCS score from the precomputed array to avoid cross-level lookup issues.
+    best_score = float(score_base_arr[anchor_idx])
+
+    # Log anchor geometry: shoulder and wrist lines.
+    anchor_c = batch_pose_data[anchor_idx]['bodies']['candidate']
+    if has_pt(anchor_c[2]) and has_pt(anchor_c[5]):
+        sh_dy = abs(float(anchor_c[5][1] - anchor_c[2][1]))
+        sh_dx = abs(float(anchor_c[5][0] - anchor_c[2][0]))
+        logger(f"[Anchor] Shoulder line: dy={sh_dy:.2f}px, angle={math.degrees(math.atan2(sh_dy, max(sh_dx, 1e-6))):.1f}°")
+    else:
+        logger("[Anchor] Shoulder line: missing keypoints")
+    if has_pt(anchor_c[4]) and has_pt(anchor_c[7]):
+        wr_dy = abs(float(anchor_c[7][1] - anchor_c[4][1]))
+        wr_dx = abs(float(anchor_c[7][0] - anchor_c[4][0]))
+        logger(f"[Anchor] Wrist line: dy={wr_dy:.2f}px, angle={math.degrees(math.atan2(wr_dy, max(wr_dx, 1e-6))):.1f}°")
+    else:
+        logger("[Anchor] Wrist line: missing keypoints")
+    if has_pt(anchor_c[0]) and has_pt(anchor_c[16]) and has_pt(anchor_c[17]):
+        d_r = math.sqrt((float(anchor_c[16][0]) - float(anchor_c[0][0])) ** 2 + (float(anchor_c[16][1]) - float(anchor_c[0][1])) ** 2)
+        d_l = math.sqrt((float(anchor_c[17][0]) - float(anchor_c[0][0])) ** 2 + (float(anchor_c[17][1]) - float(anchor_c[0][1])) ** 2)
+        ratio = max(d_r, d_l) / max(min(d_r, d_l), 1e-6)
+        logger(f"[Anchor] Ear-nose ratio: {ratio:.3f} (right={d_r:.2f}px, left={d_l:.2f}px)")
+    else:
+        logger("[Anchor] Ear-nose ratio: missing keypoints")
+
     return anchor_idx, best_score, found_perfect_frame, found_degraded_frame, level1_scores, level2_scores
