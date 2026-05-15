@@ -10,6 +10,6 @@ Repository = "https://github.com/wuwukaka/ComfyUI-BodyRatioMapper.git"
 # Some code is derived from grmchn/ComfyUI-ProportionChanger
 
 [tool.comfy]
-PublisherId = "wuwukaka"
+PublisherId = "wuwukasi"
 DisplayName = "ComfyUI-BodyRatioMapper"
 Icon = ""
