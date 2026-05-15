@@ -26,6 +26,25 @@ def build_stabilized_offset(base_offset, frame_idx, enable_final_offset_alignmen
     return offset
 
 
+def get_head_anchor_point(candidate, has_pt):
+    """Get nose point from a candidate array; fallback to neck then shoulder midpoint."""
+    if has_pt(candidate[0]):
+        return candidate[0].copy()
+    if has_pt(candidate[1]):
+        return candidate[1].copy()
+    if has_pt(candidate[2]) and has_pt(candidate[5]):
+        return ((candidate[2] + candidate[5]) * 0.5).copy()
+    return None
+
+
+def compute_frame_offset(head_fixed_mode, final_head_offsets,
+                         global_base_offset, frame_idx, build_stabilized_offset_fn):
+    """Compute per-frame offset. Head-fixed mode uses precomputed per-frame nose alignment."""
+    if head_fixed_mode and final_head_offsets is not None and 0 <= frame_idx < len(final_head_offsets):
+        return final_head_offsets[frame_idx]
+    return build_stabilized_offset_fn(global_base_offset, frame_idx)
+
+
 def force_align_face_hands_to_body(frame_data, has_pt, safe_add):
     """
     Force face and hands to follow body anchors.

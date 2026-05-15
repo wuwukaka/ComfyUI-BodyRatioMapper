@@ -314,6 +314,11 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
     is_lower_leg_ratio_excessive_arr = lr_ratio_mask(12, 13, 9, 10)
     is_body_ratio_excessive_arr = is_torso_ratio_excessive_arr | is_upper_leg_ratio_excessive_arr | is_lower_leg_ratio_excessive_arr
 
+    # Reject when nose is below the shoulder line (interpolated Y at nose X).
+    sh_raw_dx = x[:, 5] - x[:, 2]
+    sh_line_y_at_nose = np.where(np.abs(sh_raw_dx) > 1e-6, y[:, 2] + (y[:, 5] - y[:, 2]) * (x[:, 0] - x[:, 2]) / sh_raw_dx, np.maximum(y[:, 2], y[:, 5]))
+    is_nose_below_shoulder_line_arr = pt_present[:, 0] & pt_present[:, 2] & pt_present[:, 5] & (y[:, 0] >= sh_line_y_at_nose)
+
     common_hard_reject = (
         is_ankle_tilt_excessive_arr
         | is_wrist_tilt_excessive_arr
@@ -327,6 +332,7 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
         | is_knee_tilt_excessive_arr
         | is_shoulder_tilt_excessive_arr
         | is_body_ratio_excessive_arr
+        | is_nose_below_shoulder_line_arr
     )
 
     has_shoulders = pt_present[:, 2] & pt_present[:, 5]
