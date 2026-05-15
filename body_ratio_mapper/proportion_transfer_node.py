@@ -17,6 +17,7 @@ from .core_modules.global_rpca import (
 from .core_modules import frame_ops as frame_ops_external
 from .core_modules import scale_solver as scale_solver_external
 from .core_modules import matrix_ops as matrix_ops_external
+from .core_modules.multi_person_tracker import MultiPersonTracker, align_tracks_to_n_ref
 
 
 @dataclass(frozen=True)
@@ -698,36 +699,6 @@ class BodyRatioMapperProportionTransfer:
             tracks[i] = self._ensure_track_first_frame_valid(tracks[i], conf_thresh)
         return tracks
 
-    def _find_first_full_valid_frame_index(self, frames, n_people, conf_thresh):
-        if n_people <= 0:
-            return -1
-        for fi, frame in enumerate(frames):
-            people = self._sorted_people_for_frame(frame, conf_thresh)
-            if len(people) < n_people:
-                continue
-            ok = True
-            for pi in range(n_people):
-                if self._is_frame_absent(people[pi], conf_thresh):
-                    ok = False
-                    break
-            if ok:
-                return fi
-        return -1
-
-    def _person_reference_point(self, person, conf_thresh):
-        pose = self._body18_triplets(person)
-
-        def conf_ok(i):
-            return i < len(pose) and len(pose[i]) > 2 and float(pose[i][2]) >= conf_thresh
-
-        if conf_ok(1):
-            return np.array([float(pose[1][0]), float(pose[1][1])], dtype=float)
-        if conf_ok(2) and conf_ok(5):
-            x = 0.5 * (float(pose[2][0]) + float(pose[5][0]))
-            y = 0.5 * (float(pose[2][1]) + float(pose[5][1]))
-            return np.array([x, y], dtype=float)
-        return None
-
     def _person_reference_point_with_mode(self, person, conf_thresh, state):
         """
         Nose-first reference point with hysteresis:
@@ -777,299 +748,7 @@ class BodyRatioMapperProportionTransfer:
     def _pixel_match_threshold(canvas_w, canvas_h, ratio=0.05):
         return float(ratio) * float(np.sqrt(float(canvas_w) * float(canvas_w) + float(canvas_h) * float(canvas_h)))
 
-    def _stabilize_tracks_after_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05, assignment_map=None):
-        if len(tracks) == 0:
-            return tracks, assignment_map
-        if full_idx < 0 or full_idx >= len(frames):
-            return tracks, assignment_map
 
-        n = len(tracks)
-        id_people = self._sorted_people_for_frame(frames[full_idx], conf_thresh)
-        if len(id_people) < n:
-            return tracks, assignment_map
-
-        if assignment_map is None:
-            assignment_map = [[-1 for _ in range(len(frames))] for _ in range(n)]
-
-        # Lock IDs at t* (left-to-right order at t*).
-        last_valid_points = [None] * n
-        last_valid_frame_idx = [full_idx] * n
-        ref_states = [{"ref_mode": "nose", "nose_miss_streak": 0, "nose_recover_streak": 0} for _ in range(n)]
-        for pi in range(n):
-            p = self._clone_person_fast(id_people[pi])
-            tracks[pi][full_idx] = {
-                "people": [p],
-                "canvas_width": frames[full_idx]["canvas_width"],
-                "canvas_height": frames[full_idx]["canvas_height"],
-            }
-            last_valid_points[pi] = self._person_reference_point_with_mode(p, conf_thresh, ref_states[pi])
-            assignment_map[pi][full_idx] = pi
-
-        # Keep ID order stable for t*+1 ... end by nearest matching to previous valid point.
-        for fi in range(full_idx + 1, len(frames)):
-            frame = frames[fi]
-            canvas_w = frame["canvas_width"]
-            canvas_h = frame["canvas_height"]
-            tau_px = self._pixel_match_threshold(canvas_w, canvas_h, ratio=ratio)
-            candidates = self._sorted_people_for_frame(frame, conf_thresh)
-            used = set()
-
-            for pi in range(n):
-                ref_pt = last_valid_points[pi]
-                best_j = -1
-                best_d = float("inf")
-                if ref_pt is not None:
-                    for cj in range(len(candidates)):
-                        if cj in used:
-                            continue
-                        cp = self._person_reference_point_with_mode(candidates[cj], conf_thresh, ref_states[pi].copy())
-                        if cp is None:
-                            continue
-                        d = float(np.sqrt(np.sum((cp - ref_pt) ** 2)))
-                        if d < best_d:
-                            best_d = d
-                            best_j = cj
-
-                gap = fi - last_valid_frame_idx[pi]
-                gap_mult = max(1, min(3, gap))
-                tau_eff = tau_px * float(gap_mult)
-                is_match = (best_j >= 0) and ((n == 1) or (best_d <= tau_eff))
-                if is_match:
-                    chosen = self._clone_person_fast(candidates[best_j])
-                    used.add(best_j)
-                    tracks[pi][fi] = {
-                        "people": [chosen],
-                        "canvas_width": canvas_w,
-                        "canvas_height": canvas_h,
-                    }
-                    new_pt = self._person_reference_point_with_mode(chosen, conf_thresh, ref_states[pi])
-                    if new_pt is not None:
-                        last_valid_points[pi] = new_pt
-                        last_valid_frame_idx[pi] = fi
-                    assignment_map[pi][fi] = best_j
-                else:
-                    tracks[pi][fi] = {
-                        "people": [self._build_zero_person_openpose()],
-                        "canvas_width": canvas_w,
-                        "canvas_height": canvas_h,
-                    }
-                    assignment_map[pi][fi] = -1
-        return tracks, assignment_map
-
-    def _stabilize_tracks_before_t_star(self, tracks, frames, full_idx, conf_thresh, ratio=0.05, assignment_map=None):
-        if len(tracks) == 0:
-            return tracks, assignment_map
-        if full_idx <= 0 or full_idx >= len(frames):
-            return tracks, assignment_map
-
-        n = len(tracks)
-        id_people = self._sorted_people_for_frame(frames[full_idx], conf_thresh)
-        if len(id_people) < n:
-            return tracks, assignment_map
-
-        if assignment_map is None:
-            assignment_map = [[-1 for _ in range(len(frames))] for _ in range(n)]
-
-        # Lock IDs at t* and track nearest points backward.
-        last_valid_points = [None] * n
-        last_valid_frame_idx = [full_idx] * n
-        ref_states = [{"ref_mode": "nose", "nose_miss_streak": 0, "nose_recover_streak": 0} for _ in range(n)]
-        for pi in range(n):
-            p = self._clone_person_fast(id_people[pi])
-            last_valid_points[pi] = self._person_reference_point_with_mode(p, conf_thresh, ref_states[pi])
-            assignment_map[pi][full_idx] = pi
-
-        # Keep ID order stable for 0 ... t*-1 by reverse nearest matching to next valid point.
-        for fi in range(full_idx - 1, -1, -1):
-            frame = frames[fi]
-            canvas_w = frame["canvas_width"]
-            canvas_h = frame["canvas_height"]
-            tau_px = self._pixel_match_threshold(canvas_w, canvas_h, ratio=ratio)
-            candidates = self._sorted_people_for_frame(frame, conf_thresh)
-            used = set()
-
-            for pi in range(n):
-                ref_pt = last_valid_points[pi]
-                best_j = -1
-                best_d = float("inf")
-                if ref_pt is not None:
-                    for cj in range(len(candidates)):
-                        if cj in used:
-                            continue
-                        cp = self._person_reference_point_with_mode(candidates[cj], conf_thresh, ref_states[pi].copy())
-                        if cp is None:
-                            continue
-                        d = float(np.sqrt(np.sum((cp - ref_pt) ** 2)))
-                        if d < best_d:
-                            best_d = d
-                            best_j = cj
-
-                gap = last_valid_frame_idx[pi] - fi
-                gap_mult = max(1, min(3, gap))
-                tau_eff = tau_px * float(gap_mult)
-                is_match = (best_j >= 0) and ((n == 1) or (best_d <= tau_eff))
-                if is_match:
-                    chosen = self._clone_person_fast(candidates[best_j])
-                    used.add(best_j)
-                    tracks[pi][fi] = {
-                        "people": [chosen],
-                        "canvas_width": canvas_w,
-                        "canvas_height": canvas_h,
-                    }
-                    new_pt = self._person_reference_point_with_mode(chosen, conf_thresh, ref_states[pi])
-                    if new_pt is not None:
-                        last_valid_points[pi] = new_pt
-                        last_valid_frame_idx[pi] = fi
-                    assignment_map[pi][fi] = best_j
-                else:
-                    tracks[pi][fi] = {
-                        "people": [self._build_zero_person_openpose()],
-                        "canvas_width": canvas_w,
-                        "canvas_height": canvas_h,
-                    }
-                    assignment_map[pi][fi] = -1
-        return tracks, assignment_map
-
-    def _apply_majority_id_smoothing(self, tracks, frames, assignment_map, conf_thresh):
-        if not tracks or assignment_map is None:
-            return tracks
-        n = len(tracks)
-        total_frames = len(frames)
-
-        # Phase 1: Compute voted_map as fallback preference (existing logic).
-        voted_map = [[-1 for _ in range(total_frames)] for _ in range(n)]
-        for pi in range(n):
-            for fi in range(total_frames):
-                start = max(0, fi - 7)
-                end = min(total_frames - 1, fi + 8)
-                counts = {}
-                for k in range(start, end + 1):
-                    cand_idx = assignment_map[pi][k]
-                    if cand_idx is None or cand_idx < 0:
-                        continue
-                    counts[cand_idx] = counts.get(cand_idx, 0) + 1
-                if not counts:
-                    voted_map[pi][fi] = assignment_map[pi][fi]
-                else:
-                    voted_map[pi][fi] = max(counts.items(), key=lambda x: x[1])[0]
-
-        # Phase 2: Build per-frame candidate reference points.
-        cand_ref_pts = []
-        for fi in range(total_frames):
-            cands = self._sorted_people_for_frame(frames[fi], conf_thresh)
-            pts = []
-            for c in cands:
-                pts.append(self._person_reference_point(c, conf_thresh))
-            cand_ref_pts.append(pts)
-
-        # Phase 3: Recover per-track locked positions from stabilizer results.
-        locked_pts = [[None] * total_frames for _ in range(n)]
-
-        t_star = -1
-        for fi in range(total_frames):
-            all_locked = all(assignment_map[pi][fi] >= 0 for pi in range(n))
-            if all_locked:
-                t_star = fi
-                break
-
-        if t_star >= 0:
-            cands_t = self._sorted_people_for_frame(frames[t_star], conf_thresh)
-            for pi in range(n):
-                idx = assignment_map[pi][t_star]
-                if 0 <= idx < len(cand_ref_pts[t_star]):
-                    locked_pts[pi][t_star] = cand_ref_pts[t_star][idx]
-
-            # Walk forward from t_star.
-            for pi in range(n):
-                for fi in range(t_star + 1, total_frames):
-                    idx = assignment_map[pi][fi]
-                    if idx >= 0 and idx < len(cand_ref_pts[fi]) and cand_ref_pts[fi][idx] is not None:
-                        locked_pts[pi][fi] = cand_ref_pts[fi][idx]
-                    else:
-                        locked_pts[pi][fi] = locked_pts[pi][fi - 1]
-
-            # Walk backward from t_star.
-            for pi in range(n):
-                for fi in range(t_star - 1, -1, -1):
-                    idx = assignment_map[pi][fi]
-                    if idx >= 0 and idx < len(cand_ref_pts[fi]) and cand_ref_pts[fi][idx] is not None:
-                        locked_pts[pi][fi] = cand_ref_pts[fi][idx]
-                    else:
-                        locked_pts[pi][fi] = locked_pts[pi][fi + 1]
-
-        # Phase 4: Distance-based greedy assignment per frame.
-        for fi in range(total_frames):
-            frame = frames[fi]
-            candidates = self._sorted_people_for_frame(frame, conf_thresh)
-            used = set()
-
-            # Separate tracks into those with stabilizer assignments and empty ones.
-            non_empty = []
-            empty_tracks = []
-            for pi in range(n):
-                if assignment_map[pi][fi] < 0:
-                    empty_tracks.append(pi)
-                else:
-                    non_empty.append(pi)
-
-            # Distance-based greedy matching for non-empty tracks.
-            pairs = []
-            for pi in non_empty:
-                lp = locked_pts[pi][fi]
-                if lp is None:
-                    continue
-                for cj in range(len(candidates)):
-                    if cj in used:
-                        continue
-                    cp = cand_ref_pts[fi][cj]
-                    if cp is None:
-                        continue
-                    d = float(np.sqrt(np.sum((cp - lp) ** 2)))
-                    pairs.append((d, pi, cj))
-
-            pairs.sort(key=lambda x: x[0])
-            matched_tracks = set()
-            for d, pi, cj in pairs:
-                if pi in matched_tracks or cj in used:
-                    continue
-                chosen = self._clone_person_fast(candidates[cj])
-                tracks[pi][fi] = {
-                    "people": [chosen],
-                    "canvas_width": frame["canvas_width"],
-                    "canvas_height": frame["canvas_height"],
-                }
-                used.add(cj)
-                matched_tracks.add(pi)
-
-            # Fallback: tracks not matched by distance use voted_map.
-            for pi in non_empty:
-                if pi in matched_tracks:
-                    continue
-                want = voted_map[pi][fi]
-                if want is not None and want >= 0 and want < len(candidates) and want not in used:
-                    chosen = self._clone_person_fast(candidates[want])
-                    tracks[pi][fi] = {
-                        "people": [chosen],
-                        "canvas_width": frame["canvas_width"],
-                        "canvas_height": frame["canvas_height"],
-                    }
-                    used.add(want)
-                else:
-                    tracks[pi][fi] = {
-                        "people": [self._build_zero_person_openpose()],
-                        "canvas_width": frame["canvas_width"],
-                        "canvas_height": frame["canvas_height"],
-                    }
-
-            # Preserve empty frames: stabilizer marked this person absent.
-            for pi in empty_tracks:
-                tracks[pi][fi] = {
-                    "people": [self._build_zero_person_openpose()],
-                    "canvas_width": frame["canvas_width"],
-                    "canvas_height": frame["canvas_height"],
-                }
-
-        return tracks
 
     def _build_anchor_output(self, anchor_people, ref_frame, mode):
         canvas_w = ref_frame.get("canvas_width", 512)
@@ -1209,46 +888,27 @@ class BodyRatioMapperProportionTransfer:
             track = self._extract_person_track(pose_keypoint, 0, conf_thresh)
             candidate_tracks.append(track)
         else:
-            for pi in range(max_people):
-                track = self._extract_person_track(pose_keypoint, pi, conf_thresh)
-                if self._video_person_passes_trajectory_rule(track, conf_thresh):
-                    candidate_tracks.append(track)
-        valid_tracks_before_resize = len(candidate_tracks)
-        trim_count = 0
-        pad_count = 0
-        pad_source = "none"
+            # Multi-person: identity-based tracking with in-loop voting.
+            tracker = MultiPersonTracker(
+                parent=self,
+                conf_thresh=conf_thresh,
+                match_ratio=0.08,
+                vote_window_half=7,
+                max_missing_streak=15,
+                trajectory_pass_rate=0.65,
+            )
+            tracker_result = tracker.track(pose_keypoint)
+            candidate_tracks = list(tracker_result.tracks)
 
-        if len(candidate_tracks) > n_ref:
-            trim_count = len(candidate_tracks) - n_ref
-            candidate_tracks = candidate_tracks[:n_ref]
-        elif len(candidate_tracks) < n_ref:
-            pad_count = n_ref - len(candidate_tracks)
-            if len(candidate_tracks) == 0:
-                zero_track = self._extract_person_track([{
-                    "people": [self._build_zero_person_openpose()],
-                    "canvas_width": f.get("canvas_width", 512),
-                    "canvas_height": f.get("canvas_height", 768),
-                } for f in pose_keypoint], 0, conf_thresh)
-                candidate_tracks = [self._clone_track_fast(zero_track) for _ in range(n_ref)]
-                pad_source = "zero_track"
-            else:
-                src_track = candidate_tracks[-1]
-                while len(candidate_tracks) < n_ref:
-                    candidate_tracks.append(self._clone_track_fast(src_track))
-                pad_source = "last_valid_track"
-
-        full_valid_frame_idx = self._find_first_full_valid_frame_index(
-            pose_keypoint, len(candidate_tracks), conf_thresh
-        )
-        assignment_map = [[-1 for _ in range(len(pose_keypoint))] for _ in range(len(candidate_tracks))]
-        candidate_tracks, assignment_map = self._stabilize_tracks_before_t_star(
-            candidate_tracks, pose_keypoint, full_valid_frame_idx, conf_thresh, ratio=0.08, assignment_map=assignment_map
-        )
-        candidate_tracks, assignment_map = self._stabilize_tracks_after_t_star(
-            candidate_tracks, pose_keypoint, full_valid_frame_idx, conf_thresh, ratio=0.08, assignment_map=assignment_map
-        )
-        candidate_tracks = self._apply_majority_id_smoothing(
-            candidate_tracks, pose_keypoint, assignment_map, conf_thresh
+        # Align track count to n_ref (trim excess / pad shortage).
+        candidate_tracks, trim_count, pad_count, pad_source = align_tracks_to_n_ref(
+            candidate_tracks, n_ref,
+            zero_track_builder=lambda: self._extract_person_track([{
+                "people": [self._build_zero_person_openpose()],
+                "canvas_width": f.get("canvas_width", 512),
+                "canvas_height": f.get("canvas_height", 768),
+            } for f in pose_keypoint], 0, conf_thresh),
+            clone_track_fn=self._clone_track_fast,
         )
 
         manual_people_filtered = []
@@ -1264,10 +924,8 @@ class BodyRatioMapperProportionTransfer:
         self._log_multi_summary(
             "video_tracks_ready",
             input_max_people=max_people,
-            valid_tracks_before_resize=valid_tracks_before_resize,
             final_tracks=len(candidate_tracks),
             n_ref=n_ref,
-            full_valid_frame_idx=full_valid_frame_idx,
             trim_count=trim_count,
             pad_count=pad_count,
             pad_source=pad_source,
