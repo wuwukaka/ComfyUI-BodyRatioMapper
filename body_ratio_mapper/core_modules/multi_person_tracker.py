@@ -174,6 +174,8 @@ class MultiPersonTracker:
         for ci, person in enumerate(candidates):
             if self.parent._is_frame_absent(person, self.conf_thresh):
                 continue
+            if not self.parent._video_frame_passes_required_points(person, self.conf_thresh):
+                continue
             ts = TrackState(track_id=self._next_id)
             self._next_id += 1
             ref_pt = self._ref_point(person, ts.ref_state)
@@ -256,6 +258,8 @@ class MultiPersonTracker:
                 continue
             # Candidate not matched to any track – check if it's far from all tracks
             if self.parent._is_frame_absent(candidates[ci], self.conf_thresh):
+                continue
+            if not self.parent._video_frame_passes_required_points(candidates[ci], self.conf_thresh):
                 continue
             pt = cand_pts[ci]
             if pt is None:
