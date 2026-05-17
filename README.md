@@ -17,8 +17,11 @@ Typical use cases:
 
 - Pose Alignment
 - Body Ratio Mapping
+- Multi-person support with identity-based tracking (nearest-neighbor + sliding-window voting)
 - Built-in keypoint rendering nodes for visual inspection
-- Multi-person support
+- Per-bone FK chain scaling (SDPose Bone Scale node)
+- Global keypoint translation (SDPose Translate node)
+- Match-original-ear-scale mode for consistent ear width output
 
 ## Results
 
@@ -81,12 +84,29 @@ Restart ComfyUI after installation.
 `pose_keypoint`
 `ref_pose_keypoint`
 `manual_anchor_pose`
+`manual_first_frame`
 - Common parameters:
-`alignment_mode`, `hand_scaling`, `foot_scaling`, `offset_stabilizer`, `confidence_threshold`, `output_absolute_coordinates`
+`enable_rpca`, `hand_scaling`, `foot_scaling`, `offset_stabilizer_y`, `offset_stabilizer_x`, `best_hand_search`, `best_neck_search`, `final_offset_alignment`, `base_offset_mode`, `head_fixed_mode`, `match_original_ear_scale`, `confidence_threshold`, `output_absolute_coordinates`
 - Outputs:
-`changed_pose_keypoint`, `anchor_pose_keypoint`
+`changed_pose_keypoint`, `anchor_pose_keypoint`, `first_frame_output`
 
-### 2. BodyRatioMapper SDPose Render
+### 2. BodyRatioMapper SDPose Bone Scale
+
+- Node name: `BodyRatioMapperSDPoseBoneScale`
+- Purpose: Per-bone FK chain scaling on SDPose keypoints. All scales default to 1.0 (no change).
+- Parameters:
+`person_idx` (-1 = all persons), `scale_head_x`, `scale_head_y`, `scale_neck`, `scale_shoulder_width`, `scale_upper_arm`, `scale_lower_arm`, `scale_torso`, `scale_hip_width`, `scale_upper_leg`, `scale_lower_leg`, `scale_foot`
+- Output: `POSE_KEYPOINT`
+
+### 3. BodyRatioMapper SDPose Translate
+
+- Node name: `BodyRatioMapperSDPoseTranslate`
+- Purpose: Apply a global XY offset to all keypoints of an SDPose person.
+- Parameters:
+`person_idx` (-1 = all persons), `translate_x`, `translate_y`
+- Output: `POSE_KEYPOINT`
+
+### 4. BodyRatioMapper SDPose Render
 
 - Node name: `BodyRatioMapperSDPoseRender`
 - Purpose: Renders keypoints as a skeleton image.
@@ -94,12 +114,12 @@ Restart ComfyUI after installation.
 `resolution_x`, `score_threshold`, `stick_width`, `face_point_size`, `draw_face`, `draw_hands`, `draw_feet`
 - Output: `IMAGE`
 
-### 3. pose_keypoint input
+### 5. pose_keypoint input
 
 - Node name: `PoseJSONToPoseKeypoint`
 - Purpose: Converts a JSON string into `POSE_KEYPOINT`, useful for manual debugging or external keypoint input.
 
-### 4. pose_keypoint preview
+### 6. pose_keypoint preview
 
 - Node name: `PoseKeypointPreview`
 - Purpose: Converts `POSE_KEYPOINT` into JSON text and displays it in-node for copying, inspection, and round-tripping.
@@ -110,8 +130,15 @@ Restart ComfyUI after installation.
 ComfyUI-BodyRatioMapper/
 ├─ body_ratio_mapper/
 │  ├─ core_modules/
+│  │  ├─ multi_person_tracker.py
+│  │  ├─ frame_ops.py
+│  │  ├─ global_rpca.py
+│  │  ├─ scale_solver.py
+│  │  ├─ wscs_anchor.py
+│  │  └─ matrix_ops.py
 │  ├─ proportion_transfer_node.py
-│  └─ render_nodes.py
+│  ├─ render_nodes.py
+│  └─ bone_scale_node.py
 ├─ web/js/poseKeypointPreview.js
 ├─ example_workflows/
 ├─ docs/

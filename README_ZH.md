@@ -17,8 +17,11 @@
 
 - 姿势对齐（Pose Alignment）
 - 人体比例映射（Body Ratio Mapping）
+- 多人支持（基于身份追踪：最近邻匹配 + 滑窗投票）
 - 提供关键点渲染节点，便于可视化检查
-- 支持多人场景
+- 逐骨骼 FK 链缩放（SDPose Bone Scale 节点）
+- 关键点整体位移（SDPose Translate 节点）
+- 匹配原视频首帧耳朵大小模式（match_original_ear_scale）
 
 ## 效果展示
 
@@ -82,12 +85,29 @@ pip install -r requirements.txt
 `pose_keypoint`
 `ref_pose_keypoint`
 `manual_anchor_pose`
+`manual_first_frame`
 - 常用参数：
-`alignment_mode`、`hand_scaling`、`foot_scaling`、`offset_stabilizer`、`confidence_threshold`、`output_absolute_coordinates`
+`enable_rpca`、`hand_scaling`、`foot_scaling`、`offset_stabilizer_y`、`offset_stabilizer_x`、`best_hand_search`、`best_neck_search`、`final_offset_alignment`、`base_offset_mode`、`head_fixed_mode`、`match_original_ear_scale`、`confidence_threshold`、`output_absolute_coordinates`
 - 输出：
-`changed_pose_keypoint`、`anchor_pose_keypoint`
+`changed_pose_keypoint`、`anchor_pose_keypoint`、`first_frame_output`
 
-### 2. BodyRatioMapper SDPose Render
+### 2. BodyRatioMapper SDPose Bone Scale
+
+- 节点名：`BodyRatioMapperSDPoseBoneScale`
+- 作用：对 SDPose 关键点进行逐骨骼 FK 链缩放，所有缩放值默认 1.0（不变）。
+- 参数：
+`person_idx`（-1 = 全部人）、`scale_head_x`、`scale_head_y`、`scale_neck`、`scale_shoulder_width`、`scale_upper_arm`、`scale_lower_arm`、`scale_torso`、`scale_hip_width`、`scale_upper_leg`、`scale_lower_leg`、`scale_foot`
+- 输出：`POSE_KEYPOINT`
+
+### 3. BodyRatioMapper SDPose Translate
+
+- 节点名：`BodyRatioMapperSDPoseTranslate`
+- 作用：对 SDPose 人物的所有关键点施加整体 XY 偏移。
+- 参数：
+`person_idx`（-1 = 全部人）、`translate_x`、`translate_y`
+- 输出：`POSE_KEYPOINT`
+
+### 4. BodyRatioMapper SDPose Render
 
 - 节点名：`BodyRatioMapperSDPoseRender`
 - 作用：将关键点渲染为骨架图
@@ -95,12 +115,12 @@ pip install -r requirements.txt
 `resolution_x`、`score_threshold`、`stick_width`、`face_point_size`、`draw_face`、`draw_hands`、`draw_feet`
 - 输出：`IMAGE`
 
-### 3. pose_keypoint input
+### 5. pose_keypoint input
 
 - 节点名：`PoseJSONToPoseKeypoint`
 - 作用：将 JSON 字符串转换为 `POSE_KEYPOINT`，便于手工调试或粘贴外部关键点。
 
-### 4. pose_keypoint preview
+### 6. pose_keypoint preview
 
 - 节点名：`PoseKeypointPreview`
 - 作用：将 `POSE_KEYPOINT` 转为 JSON 文本并显示在节点上，便于复制、检查和回灌。
@@ -111,8 +131,15 @@ pip install -r requirements.txt
 ComfyUI-BodyRatioMapper/
 ├─ body_ratio_mapper/
 │  ├─ core_modules/
+│  │  ├─ multi_person_tracker.py
+│  │  ├─ frame_ops.py
+│  │  ├─ global_rpca.py
+│  │  ├─ scale_solver.py
+│  │  ├─ wscs_anchor.py
+│  │  └─ matrix_ops.py
 │  ├─ proportion_transfer_node.py
-│  └─ render_nodes.py
+│  ├─ render_nodes.py
+│  └─ bone_scale_node.py
 ├─ web/js/poseKeypointPreview.js
 ├─ example_workflows/
 ├─ docs/
