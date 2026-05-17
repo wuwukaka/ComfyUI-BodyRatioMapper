@@ -2181,31 +2181,39 @@ class BodyRatioMapperProportionTransfer:
             )
 
             # Phase 1b: Match-original-ear-scale override
+            # ear_ratio = f0_ear / ref_ear, so that
+            # final_face_x = (ref_ear/anchor_ear) * (f0_ear/ref_ear) = f0_ear/anchor_ear
+            # output_f0_ear = anchor_ear * final_face_x = f0_ear  (matches original)
             if match_original_ear_scale:
                 ear_ratio = 1.0
                 found_ear = False
-                for fi in range(len(batch_pose_data)):
-                    c = batch_pose_data[fi]['bodies']['candidate']
-                    conf = batch_pose_data[fi]['bodies']['candidate_conf']
-                    if not (has_pt(c[0]) and has_pt(c[14]) and has_pt(c[15])
-                            and has_pt(c[16]) and has_pt(c[17])):
-                        continue
-                    if fi not in neck_valid_indices:
-                        continue
-                    if len(conf) > 17 and (conf[16] < conf_thresh or conf[17] < conf_thresh):
-                        continue
-                    f0_ear = np.sqrt((c[16][0] - c[17][0])**2 + (c[16][1] - c[17][1])**2)
-                    anc_ear = np.sqrt((anc_candidate[16][0] - anc_candidate[17][0])**2
-                                      + (anc_candidate[16][1] - anc_candidate[17][1])**2)
-                    if anc_ear > 1e-6 and f0_ear > 1e-6:
-                        ear_ratio = anc_ear / f0_ear
-                        found_ear = True
-                    break
+                # Reference ear width
+                ref_cand = ref_data[0]['bodies']['candidate'] if ref_data else None
+                ref_ear = 0.0
+                if ref_cand is not None and has_pt(ref_cand[16]) and has_pt(ref_cand[17]):
+                    ref_ear = np.sqrt((ref_cand[16][0] - ref_cand[17][0])**2
+                                      + (ref_cand[16][1] - ref_cand[17][1])**2)
+                if ref_ear > 1e-6:
+                    for fi in range(len(batch_pose_data)):
+                        c = batch_pose_data[fi]['bodies']['candidate']
+                        conf = batch_pose_data[fi]['bodies']['candidate_conf']
+                        if not (has_pt(c[0]) and has_pt(c[14]) and has_pt(c[15])
+                                and has_pt(c[16]) and has_pt(c[17])):
+                            continue
+                        if fi not in neck_valid_indices:
+                            continue
+                        if len(conf) > 17 and (conf[16] < conf_thresh or conf[17] < conf_thresh):
+                            continue
+                        f0_ear = np.sqrt((c[16][0] - c[17][0])**2 + (c[16][1] - c[17][1])**2)
+                        if f0_ear > 1e-6:
+                            ear_ratio = f0_ear / ref_ear
+                            found_ear = True
+                        break
                 if found_ear:
                     global_rpca = ear_ratio
-                    print(f"[EarScale] anchor_ear={anc_ear:.2f}, target_ear={f0_ear:.2f}, ratio={ear_ratio:.3f}")
+                    print(f"[EarScale] ref_ear={ref_ear:.2f}, target_ear={f0_ear:.2f}, ratio={ear_ratio:.3f}")
                 else:
-                    print("[EarScale] No valid ear frame found, using default RPCA")
+                    print("[EarScale] No valid ear frame or ref ears found, using default RPCA")
 
             # Phase 2: Extract and assemble FK values (Ref vs Anchor)
             fk_pkg = build_fk_values(anc_candidate, anc_faces, anc_hands, anc_feet, hand_baseline)
