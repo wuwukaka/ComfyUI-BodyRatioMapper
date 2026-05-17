@@ -13,6 +13,12 @@ from .render_nodes import (
     BodyRatioMapperSDPoseRender,
 )
 
+# Import bone scale node class
+from .bone_scale_node import (
+    BodyRatioMapperSDPoseBoneScale,
+    BodyRatioMapperSDPoseTranslate,
+)
+
 __all__ = [
     # Proportion transfer node
     "BodyRatioMapperProportionTransfer",
@@ -20,5 +26,10 @@ __all__ = [
     # Render node
     "BodyRatioMapperSDPoseRender",
 
+    # Bone scale node
+    "BodyRatioMapperSDPoseBoneScale",
+
+    # Translate node
+    "BodyRatioMapperSDPoseTranslate",
 ]
 

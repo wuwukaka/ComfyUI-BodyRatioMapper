@@ -36,6 +36,7 @@ class RuntimeConfig:
     final_offset_alignment: bool = True
     base_offset_mode: bool = False
     head_fixed_mode: bool = False
+    match_original_ear_scale: bool = False
     anchor_output_mode: str = "single_frame_multi_person"
     print_detailed_logs: bool = False
     confidence_threshold: float = 0.30
@@ -65,6 +66,7 @@ class BodyRatioMapperProportionTransfer:
                 "final_offset_alignment": ("BOOLEAN", {"default": True, "label_on": "Final Offset Align ON", "label_off": "Final Offset Align OFF"}),
                 "base_offset_mode": ("BOOLEAN", {"default": False, "label_on": "First-Frame Offset", "label_off": "Anchor-Frame Offset", "tooltip": "ON: align global offset by reference vs first frame. OFF: align by reference vs anchor frame."}),
                 "head_fixed_mode": ("BOOLEAN", {"default": False, "label_on": "Head Fixed ON", "label_off": "Head Fixed OFF", "tooltip": "ON: per-frame nose alignment to reference nose, keeping head visually stationary. Overrides base_offset_mode and stabilizer."}),
+                "match_original_ear_scale": ("BOOLEAN", {"default": False, "label_on": "Match Ear Scale ON", "label_off": "Match Ear Scale OFF", "tooltip": "ON: compute ear-width ratio between anchor and first valid head frame, use as RPCA multiplier to match original ear size."}),
                 "anchor_output_mode": (["single_frame_multi_person", "multi_frame_single_person"], {"default": "single_frame_multi_person", "tooltip": "Anchor output layout mode."}),
                 "print_detailed_logs": ("BOOLEAN", {"default": False, "label_on": "Detailed Logs ON", "label_off": "Detailed Logs OFF", "tooltip": "Enable verbose internal logs. OFF uses concise summary logs."}),
                 "confidence_threshold": ("FLOAT", {"default": 0.30, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Unified confidence threshold for WSCS and reference gating."}),
@@ -123,6 +125,7 @@ class BodyRatioMapperProportionTransfer:
                               final_offset_alignment=True,
                               base_offset_mode=False,
                               head_fixed_mode=False,
+                              match_original_ear_scale=False,
                               anchor_output_mode="single_frame_multi_person",
                               print_detailed_logs=False,
                               confidence_threshold=0.30,
@@ -142,6 +145,7 @@ class BodyRatioMapperProportionTransfer:
             final_offset_alignment=bool(final_offset_alignment),
             base_offset_mode=bool(base_offset_mode),
             head_fixed_mode=bool(head_fixed_mode),
+            match_original_ear_scale=bool(match_original_ear_scale),
             anchor_output_mode=str(anchor_output_mode),
             print_detailed_logs=bool(print_detailed_logs),
             confidence_threshold=float(confidence_threshold),
@@ -163,6 +167,7 @@ class BodyRatioMapperProportionTransfer:
                                 final_offset_alignment=True,
                                 base_offset_mode=False,
                                 head_fixed_mode=False,
+                                match_original_ear_scale=False,
                                 anchor_output_mode="single_frame_multi_person",
                                 print_detailed_logs=False,
                                 confidence_threshold=0.30,
@@ -184,6 +189,7 @@ class BodyRatioMapperProportionTransfer:
             final_offset_alignment=final_offset_alignment,
             base_offset_mode=base_offset_mode,
             head_fixed_mode=head_fixed_mode,
+            match_original_ear_scale=match_original_ear_scale,
             anchor_output_mode=anchor_output_mode,
             print_detailed_logs=print_detailed_logs,
             confidence_threshold=confidence_threshold,
@@ -797,7 +803,7 @@ class BodyRatioMapperProportionTransfer:
         self._validate_anchor_output_shape(anchor_output, len(sorted_people), anchor_output_mode)
         return (changed_output, anchor_output, [copy.deepcopy(first_frame)])
 
-    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, manual_first_frame=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, base_offset_mode=False, head_fixed_mode=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
+    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, manual_first_frame=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, base_offset_mode=False, head_fixed_mode=False, match_original_ear_scale=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint, pose_keypoint)
 
@@ -815,6 +821,7 @@ class BodyRatioMapperProportionTransfer:
             final_offset_alignment=final_offset_alignment,
             base_offset_mode=base_offset_mode,
             head_fixed_mode=head_fixed_mode,
+            match_original_ear_scale=match_original_ear_scale,
             anchor_output_mode=anchor_output_mode,
             print_detailed_logs=print_detailed_logs,
             confidence_threshold=confidence_threshold,
@@ -1488,6 +1495,7 @@ class BodyRatioMapperProportionTransfer:
         final_offset_alignment = runtime_cfg.final_offset_alignment
         base_offset_mode = runtime_cfg.base_offset_mode
         head_fixed_mode = runtime_cfg.head_fixed_mode
+        match_original_ear_scale = runtime_cfg.match_original_ear_scale
         output_absolute_coordinates = runtime_cfg.output_absolute_coordinates
         conf_thresh = runtime_cfg.confidence_threshold
 
@@ -2171,6 +2179,33 @@ class BodyRatioMapperProportionTransfer:
                 f0_candidate, f0_faces,
                 enable_rpca
             )
+
+            # Phase 1b: Match-original-ear-scale override
+            if match_original_ear_scale:
+                ear_ratio = 1.0
+                found_ear = False
+                for fi in range(len(batch_pose_data)):
+                    c = batch_pose_data[fi]['bodies']['candidate']
+                    conf = batch_pose_data[fi]['bodies']['candidate_conf']
+                    if not (has_pt(c[0]) and has_pt(c[14]) and has_pt(c[15])
+                            and has_pt(c[16]) and has_pt(c[17])):
+                        continue
+                    if fi not in neck_valid_indices:
+                        continue
+                    if len(conf) > 17 and (conf[16] < conf_thresh or conf[17] < conf_thresh):
+                        continue
+                    f0_ear = np.sqrt((c[16][0] - c[17][0])**2 + (c[16][1] - c[17][1])**2)
+                    anc_ear = np.sqrt((anc_candidate[16][0] - anc_candidate[17][0])**2
+                                      + (anc_candidate[16][1] - anc_candidate[17][1])**2)
+                    if anc_ear > 1e-6 and f0_ear > 1e-6:
+                        ear_ratio = anc_ear / f0_ear
+                        found_ear = True
+                    break
+                if found_ear:
+                    global_rpca = ear_ratio
+                    print(f"[EarScale] anchor_ear={anc_ear:.2f}, target_ear={f0_ear:.2f}, ratio={ear_ratio:.3f}")
+                else:
+                    print("[EarScale] No valid ear frame found, using default RPCA")
 
             # Phase 2: Extract and assemble FK values (Ref vs Anchor)
             fk_pkg = build_fk_values(anc_candidate, anc_faces, anc_hands, anc_feet, hand_baseline)

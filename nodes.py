@@ -12,6 +12,8 @@ log = logging.getLogger(__name__)
 from .body_ratio_mapper import (
     BodyRatioMapperProportionTransfer,
     BodyRatioMapperSDPoseRender,
+    BodyRatioMapperSDPoseBoneScale,
+    BodyRatioMapperSDPoseTranslate,
 )
 
 
@@ -162,6 +164,8 @@ NODE_CLASS_MAPPINGS = {
     # Main nodes
     "BodyRatioMapperSDPoseRender": BodyRatioMapperSDPoseRender,
     "BodyRatioMapperProportionTransfer": BodyRatioMapperProportionTransfer,
+    "BodyRatioMapperSDPoseBoneScale": BodyRatioMapperSDPoseBoneScale,
+    "BodyRatioMapperSDPoseTranslate": BodyRatioMapperSDPoseTranslate,
 
     # Utility nodes
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
@@ -172,6 +176,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Main nodes
     "BodyRatioMapperSDPoseRender": "BodyRatioMapper SDPose Render",
     "BodyRatioMapperProportionTransfer": "BodyRatioMapper Proportion Transfer",
+    "BodyRatioMapperSDPoseBoneScale": "BodyRatioMapper SDPose Bone Scale",
+    "BodyRatioMapperSDPoseTranslate": "BodyRatioMapper SDPose Translate",
 
     # Utility nodes
     "PoseJSONToPoseKeypoint": "pose_keypoint input",
