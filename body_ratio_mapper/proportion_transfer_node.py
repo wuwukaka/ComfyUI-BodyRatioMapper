@@ -2219,7 +2219,10 @@ class BodyRatioMapperProportionTransfer:
             fk_pkg = build_fk_values(anc_candidate, anc_faces, anc_hands, anc_feet, hand_baseline)
 
             # Phase 3: Forge final scale constants (FK × RPCA)
-            final_scale_pkg = forge_final_scales_external(fk_pkg, global_rpca, enable_rpca)
+            # When match_original_ear_scale found a valid ear ratio, force enable_rpca
+            # so the ear-ratio multiplier is not discarded by forge_final_scales.
+            effective_rpca = enable_rpca or (match_original_ear_scale and found_ear)
+            final_scale_pkg = forge_final_scales_external(fk_pkg, global_rpca, effective_rpca)
 
             if enable_rpca:
                 print(f"[New Pipeline] Global RPCA: {global_rpca:.3f}")
