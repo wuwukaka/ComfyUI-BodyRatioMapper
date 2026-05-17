@@ -2188,7 +2188,7 @@ class BodyRatioMapperProportionTransfer:
                 ear_ratio = 1.0
                 found_ear = False
                 # Reference ear width
-                ref_cand = ref_data[0]['bodies']['candidate'] if ref_data else None
+                ref_cand = ref_data['bodies']['candidate'] if ref_data else None
                 ref_ear = 0.0
                 if ref_cand is not None and has_pt(ref_cand[16]) and has_pt(ref_cand[17]):
                     ref_ear = np.sqrt((ref_cand[16][0] - ref_cand[17][0])**2
