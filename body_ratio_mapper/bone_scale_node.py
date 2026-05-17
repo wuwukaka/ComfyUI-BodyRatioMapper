@@ -73,6 +73,8 @@ class BodyRatioMapperSDPoseBoneScale:
                     "tooltip": "Lower leg scale (knee to ankle, L+R linked)"}),
                 "scale_foot": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 3.0, "step": 0.01,
                     "tooltip": "Foot internal scale (3 foot points relative to ankle)"}),
+                "scale_hand": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 3.0, "step": 0.01,
+                    "tooltip": "Hand internal scale (21 hand points relative to wrist, L+R linked)"}),
             },
         }
 
@@ -91,13 +93,13 @@ class BodyRatioMapperSDPoseBoneScale:
                 scale_upper_arm=1.0, scale_lower_arm=1.0,
                 scale_torso=1.0, scale_hip_width=1.0,
                 scale_upper_leg=1.0, scale_lower_leg=1.0,
-                scale_foot=1.0):
+                scale_foot=1.0, scale_hand=1.0):
 
         # Fast path: all scales == 1.0
         if all(s == 1.0 for s in [scale_head_x, scale_head_y, scale_neck,
                 scale_shoulder_width, scale_upper_arm, scale_lower_arm,
                 scale_torso, scale_hip_width, scale_upper_leg,
-                scale_lower_leg, scale_foot]):
+                scale_lower_leg, scale_foot, scale_hand]):
             return (copy.deepcopy(pose_keypoint),)
 
         result = copy.deepcopy(pose_keypoint)
@@ -113,7 +115,7 @@ class BodyRatioMapperSDPoseBoneScale:
                         scale_upper_arm, scale_lower_arm,
                         scale_torso, scale_hip_width,
                         scale_upper_leg, scale_lower_leg,
-                        scale_foot,
+                        scale_foot, scale_hand,
                     )
         return (result,)
 
@@ -124,7 +126,7 @@ class BodyRatioMapperSDPoseBoneScale:
     def _scale_person(self, person,
                       s_hx, s_hy, s_neck, s_sh_w,
                       s_ua, s_la, s_torso, s_hip_w,
-                      s_ul, s_ll, s_foot):
+                      s_ul, s_ll, s_foot, s_hand):
 
         pose = self._triplets(person.get("pose_keypoints_2d", []), 18)
         face = self._triplets(person.get("face_keypoints_2d", []), 68)
@@ -239,6 +241,10 @@ class BodyRatioMapperSDPoseBoneScale:
         self._scale_foot_points(pose, foot, _R_ANKLE, 3, 5, s_foot)  # right foot: indices 3,4,5
         self._scale_foot_points(pose, foot, _L_ANKLE, 0, 2, s_foot)  # left foot:  indices 0,1,2
 
+        # ---- Step 11: HAND (internal, anchored at wrist) ----
+        self._scale_hand_points(hand_r, pose, _R_WRIST, s_hand)  # right hand: 21 points
+        self._scale_hand_points(hand_l, pose, _L_WRIST, s_hand)  # left hand:  21 points
+
         # ---- Writeback ----
         self._writeback(person.get("pose_keypoints_2d", []), pose, 18)
         self._writeback(person.get("face_keypoints_2d", []), face, 68)
@@ -285,6 +291,19 @@ class BodyRatioMapperSDPoseBoneScale:
             if abs(foot_flat[idx]) > 1e-3 or abs(foot_flat[idx + 1]) > 1e-3:
                 foot_flat[idx] = ax + (foot_flat[idx] - ax) * scale
                 foot_flat[idx + 1] = ay + (foot_flat[idx + 1] - ay) * scale
+
+    def _scale_hand_points(self, hand_flat, pose, wrist_idx, scale):
+        """Scale 21 hand points around wrist."""
+        if not isinstance(hand_flat, list) or not self._is_valid(pose[wrist_idx]):
+            return
+        wx, wy = pose[wrist_idx][0], pose[wrist_idx][1]
+        for i in range(21):
+            idx = i * 3
+            if idx + 1 >= len(hand_flat):
+                continue
+            if abs(hand_flat[idx]) > 1e-3 or abs(hand_flat[idx + 1]) > 1e-3:
+                hand_flat[idx] = wx + (hand_flat[idx] - wx) * scale
+                hand_flat[idx + 1] = wy + (hand_flat[idx + 1] - wy) * scale
 
     # ------------------------------------------------------------------
     # Translation helpers
