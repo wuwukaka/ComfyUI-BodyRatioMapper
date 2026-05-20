@@ -2133,10 +2133,11 @@ class BodyRatioMapperProportionTransfer:
 
             # Optional mode: replace foot edge FK with torso FK.
             if use_torso_fk_for_foot:
-                print(f"[Foot FK Mode] Torso-driven foot FK enabled: foot_edge1/2/3 <- torso_fk ({fk_torso:.3f})")
+                print(f"[Foot FK Mode] Torso-driven foot FK enabled: foot_edge1/2/3, body_to_foot_ankle <- torso_fk ({fk_torso:.3f})")
                 fk_foot_edge1 = fk_torso
                 fk_foot_edge2 = fk_torso
                 fk_foot_edge3 = fk_torso
+                fk_body_to_foot_ankle = fk_torso
 
             # Optional mode: replace hand FK with shoulder FK.
             if use_shoulder_fk_for_hand:
