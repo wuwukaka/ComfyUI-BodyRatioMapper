@@ -71,7 +71,7 @@ class BodyRatioMapperProportionTransfer:
                 "print_detailed_logs": ("BOOLEAN", {"default": False, "label_on": "Detailed Logs ON", "label_off": "Detailed Logs OFF", "tooltip": "Enable verbose internal logs. OFF uses concise summary logs."}),
                 "confidence_threshold": ("FLOAT", {"default": 0.30, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Unified confidence threshold for WSCS and reference gating."}),
                 "output_absolute_coordinates": ("BOOLEAN", {"default": True, "label_on": "Absolute Pixels", "label_off": "Normalized (0-1)"}),
-                "signature": ("STRING", {"default": "by wuwukasi(bilibili)", "multiline": False}),
+                "signature": ("BOOLEAN", {"default": True, "label_on": "by wuwukasi(bilibili)", "label_off": "by wuwukasi(bilibili)"}),
             },
         }
 
@@ -804,7 +804,7 @@ class BodyRatioMapperProportionTransfer:
         self._validate_anchor_output_shape(anchor_output, len(sorted_people), anchor_output_mode)
         return (changed_output, anchor_output, [copy.deepcopy(first_frame)])
 
-    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, manual_first_frame=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, base_offset_mode=False, head_fixed_mode=False, match_original_ear_scale=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False):
+    def process(self, pose_keypoint, ref_pose_keypoint=None, manual_anchor_pose=None, manual_first_frame=None, enable_rpca=False, hand_scaling=True, foot_scaling=True, offset_stabilizer_y=True, offset_stabilizer_x=False, best_hand_search=True, use_shoulder_fk_for_hand=False, use_torso_fk_for_arm=False, use_torso_fk_for_foot=False, best_neck_search=False, final_offset_alignment=True, base_offset_mode=False, head_fixed_mode=False, match_original_ear_scale=False, confidence_threshold=0.30, output_absolute_coordinates=True, anchor_output_mode="single_frame_multi_person", print_detailed_logs=False, signature=True):
         if not pose_keypoint or len(pose_keypoint) == 0:
             return (pose_keypoint, pose_keypoint, pose_keypoint)
 
