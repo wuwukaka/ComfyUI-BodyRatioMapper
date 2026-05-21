@@ -178,7 +178,7 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 
 如果觉得本项目对你有帮助，欢迎请我喝杯咖啡！
 
-<img src="docs/images/iamge_003.png" alt="微信赞助码" width="200"/>
+<p align="center"><img src="docs/images/iamge_003.png" alt="微信赞助码" width="400"/></p>
 
 ## 许可证
 
