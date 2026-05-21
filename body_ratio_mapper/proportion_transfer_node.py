@@ -71,6 +71,7 @@ class BodyRatioMapperProportionTransfer:
                 "print_detailed_logs": ("BOOLEAN", {"default": False, "label_on": "Detailed Logs ON", "label_off": "Detailed Logs OFF", "tooltip": "Enable verbose internal logs. OFF uses concise summary logs."}),
                 "confidence_threshold": ("FLOAT", {"default": 0.30, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Unified confidence threshold for WSCS and reference gating."}),
                 "output_absolute_coordinates": ("BOOLEAN", {"default": True, "label_on": "Absolute Pixels", "label_off": "Normalized (0-1)"}),
+                "signature": ("STRING", {"default": "by wuwukasi(bilibili)", "multiline": False}),
             },
         }
 

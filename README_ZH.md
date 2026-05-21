@@ -169,6 +169,17 @@ ComfyUI-BodyRatioMapper/
 https://github.com/grmchn/ComfyUI-ProportionChanger
 - 感谢朋友 望星铭（ https://space.bilibili.com/13066617 ）和阿临（ https://space.bilibili.com/20848068 ）提供 OC 测试素材。
 
+## 联系方式
+
+- Bilibili: [@wuwukasi](https://space.bilibili.com/670281046)
+- 邮箱: [wuwukawayi@gmail.com](mailto:wuwukawayi@gmail.com)
+
+## 赞助
+
+如果觉得本项目对你有帮助，欢迎请我喝杯咖啡！
+
+![微信赞助码](docs/images/iamge_003.png)
+
 ## 许可证
 
 因部分代码来源于 GPL v3.0 项目 `ComfyUI-ProportionChanger`，因此本项目也采用 **GPL v3.0** 协议发布。  
