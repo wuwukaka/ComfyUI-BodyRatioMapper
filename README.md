@@ -177,7 +177,7 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 
 If you find this project useful, consider buying me a coffee!
 
-![WeChat Sponsor](docs/images/iamge_003.png)
+<img src="docs/images/iamge_003.png" alt="WeChat Sponsor" width="200"/>
 
 ## License
 
