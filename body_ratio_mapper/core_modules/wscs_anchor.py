@@ -451,15 +451,15 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
                                     set(rank_lul_sub[:rem3]) & set(rank_lur_sub[:rem3]) &
                                     set(rank_lll_sub[:rem3]) & set(rank_llr_sub[:rem3]))
                 parts = ['arm_up_l', 'arm_up_r', 'arm_low_l', 'arm_low_r', 'leg_up_l', 'leg_up_r', 'leg_low_l', 'leg_low_r']
-                all_results = [result_intersect]
+                result = set(result_intersect)
                 for perm in permutations(parts):
                     current_set = set(indices)
                     for part in perm:
                         current_set = set(sorted(current_set, key=lambda x: ratios[part][x])[:rem3])
                         if len(current_set) == 0:
                             break
-                    all_results.append(current_set)
-                return list(set.union(*all_results) if any(all_results) else set())
+                    result.update(current_set)
+                return list(result)
 
             # Z-filter Level-1:
             # For gradually increasing top-k percentages, intersect rank fronts of all ratio groups.
