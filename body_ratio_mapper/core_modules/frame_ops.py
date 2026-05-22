@@ -86,10 +86,12 @@ def apply_global_offset_to_frame(frame_data, offset, has_pt, safe_add):
     Body uses point-wise has_pt checks.
     Face/hands/feet use safe_add to preserve existing masking behavior.
     """
+    offset = np.asarray(offset, dtype=np.float64).copy()
     candidate = frame_data['bodies']['candidate']
     for idx in range(len(candidate)):
-        if has_pt(candidate[idx]):
-            candidate[idx] += offset
+        pt = candidate[idx]
+        if has_pt(pt):
+            candidate[idx] = pt + offset
 
     safe_add(frame_data['faces'], offset)
     for hand_idx in range(2):
