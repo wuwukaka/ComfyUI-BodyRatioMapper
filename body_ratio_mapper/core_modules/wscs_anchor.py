@@ -454,11 +454,17 @@ def select_anchor(batch_pose_data, conf_thresh, has_pt, get_dist, logger=print):
                 result = set(result_intersect)
                 for perm in permutations(parts):
                     current_set = set(indices)
+                    skip = False
                     for part in perm:
-                        current_set = set(sorted(current_set, key=lambda x: ratios[part][x])[:rem3])
+                        rp = ratios.get(part)
+                        if not isinstance(rp, dict):
+                            skip = True
+                            break
+                        current_set = set(sorted(current_set, key=lambda x: rp.get(x, 1.0))[:rem3])
                         if len(current_set) == 0:
                             break
-                    result.update(current_set)
+                    if not skip:
+                        result.update(current_set)
                 return list(result)
 
             # Z-filter Level-1:
