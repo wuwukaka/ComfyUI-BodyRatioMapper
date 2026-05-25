@@ -175,9 +175,13 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 
 ## Sponsor
 
-If you find this project useful, consider buying me a coffee!
+If you find this project useful, consider buying me a coffee! Your support is my greatest motivation. Every bit of encouragement keeps this project going. Thank you for being part of the journey!
 
-<p align="center"><img src="docs/images/iamge_003.png" alt="WeChat Sponsor" width="400"/></p>
+<p align="center">
+  <img src="docs/images/iamge_003.png" alt="WeChat Sponsor" width="400"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/image_004.jpg" alt="Alipay Sponsor" width="400"/>
+</p>
 
 ## License
 

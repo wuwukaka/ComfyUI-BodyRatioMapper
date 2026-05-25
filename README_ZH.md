@@ -176,9 +176,13 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 
 ## 赞助
 
-如果觉得本项目对你有帮助，欢迎请我喝杯咖啡！
+如果觉得本项目对你有帮助，欢迎请我喝杯咖啡！您的支持是我最大的动力。每一份鼓励都让这个项目走得更远，感谢一路有你！
 
-<p align="center"><img src="docs/images/iamge_003.png" alt="微信赞助码" width="400"/></p>
+<p align="center">
+  <img src="docs/images/iamge_003.png" alt="微信赞助码" width="400"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="docs/images/image_004.jpg" alt="支付宝赞助码" width="400"/>
+</p>
 
 ## 许可证
 
