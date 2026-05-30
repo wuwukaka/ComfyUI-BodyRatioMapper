@@ -133,7 +133,7 @@ class PoseKeypointPreview:
             
             # Update workflow widgets_values to persist data across reloads (like Show Text)
             if unique_id is not None and extra_pnginfo is not None and len(extra_pnginfo) > 0:
-                workflow = extra_pnginfo[0]["workflow"]
+                workflow = extra_pnginfo["workflow"]
                 node = next(
                     (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
                     None,
@@ -149,7 +149,7 @@ class PoseKeypointPreview:
             
             # Update workflow even on error
             if unique_id is not None and extra_pnginfo is not None and len(extra_pnginfo) > 0:
-                workflow = extra_pnginfo[0]["workflow"]
+                workflow = extra_pnginfo["workflow"]
                 node = next(
                     (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
                     None,
