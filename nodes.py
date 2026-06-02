@@ -14,6 +14,7 @@ from .body_ratio_mapper import (
     BodyRatioMapperSDPoseRender,
     BodyRatioMapperSDPoseBoneScale,
     BodyRatioMapperSDPoseTranslate,
+    BodyRatioMapperSDPoseInterpolate,
 )
 
 
@@ -166,6 +167,7 @@ NODE_CLASS_MAPPINGS = {
     "BodyRatioMapperProportionTransfer": BodyRatioMapperProportionTransfer,
     "BodyRatioMapperSDPoseBoneScale": BodyRatioMapperSDPoseBoneScale,
     "BodyRatioMapperSDPoseTranslate": BodyRatioMapperSDPoseTranslate,
+    "BodyRatioMapperSDPoseInterpolate": BodyRatioMapperSDPoseInterpolate,
 
     # Utility nodes
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
@@ -178,6 +180,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "BodyRatioMapperProportionTransfer": "BodyRatioMapper Proportion Transfer",
     "BodyRatioMapperSDPoseBoneScale": "BodyRatioMapper SDPose Bone Scale",
     "BodyRatioMapperSDPoseTranslate": "BodyRatioMapper SDPose Translate",
+    "BodyRatioMapperSDPoseInterpolate": "BodyRatioMapper SDPose Interpolate",
 
     # Utility nodes
     "PoseJSONToPoseKeypoint": "pose_keypoint input",

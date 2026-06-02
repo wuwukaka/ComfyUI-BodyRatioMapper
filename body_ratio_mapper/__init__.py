@@ -19,6 +19,11 @@ from .bone_scale_node import (
     BodyRatioMapperSDPoseTranslate,
 )
 
+# Import interpolation node class
+from .interpolation_node import (
+    BodyRatioMapperSDPoseInterpolate,
+)
+
 __all__ = [
     # Proportion transfer node
     "BodyRatioMapperProportionTransfer",
@@ -31,5 +36,8 @@ __all__ = [
 
     # Translate node
     "BodyRatioMapperSDPoseTranslate",
+
+    # Interpolation node
+    "BodyRatioMapperSDPoseInterpolate",
 ]
 
