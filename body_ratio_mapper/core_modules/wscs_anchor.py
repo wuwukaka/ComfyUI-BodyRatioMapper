@@ -1,3 +1,6 @@
+# Copyright (C) 2026 wuwukasi (wuwukaka)
+# SPDX-License-Identifier: GPL-3.0-only
+
 import numpy as np
 import math
 from itertools import permutations

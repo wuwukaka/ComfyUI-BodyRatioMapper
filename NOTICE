@@ -1,0 +1,102 @@
+ComfyUI-BodyRatioMapper Attribution and Modification Notice
+
+Copyright (C) 2026 wuwukasi (wuwukaka)
+
+This project is licensed under GNU GPL version 3.0. This NOTICE states
+additional attribution and modification-marking requirements permitted by
+GPLv3 section 7(b) and section 7(c). These requirements apply when this code,
+modified versions of this code, or works based on this code are distributed,
+published, or otherwise made available to third parties.
+
+1. Copyright notices must be preserved.
+
+All copies, forks, redistributed versions, modified versions, and derivative
+works that include code from ComfyUI-BodyRatioMapper must keep the copyright
+notices that appear in the original source files, including:
+
+    Copyright (C) 2026 wuwukasi (wuwukaka)
+
+The copyright notice must not be removed, hidden, renamed, rewritten as a
+different author, or replaced with a vague project-level attribution.
+
+2. README attribution is required.
+
+Any distributed or published project that includes, copies, modifies, adapts,
+or derives from ComfyUI-BodyRatioMapper code must include a clear attribution
+statement in its README, documentation, or equivalent top-level project
+description.
+
+The attribution must explicitly name:
+
+- The original project: ComfyUI-BodyRatioMapper
+- The original author: wuwukasi (wuwukaka)
+- The original repository: https://github.com/wuwukaka/ComfyUI-BodyRatioMapper
+- The license: GNU GPL v3.0
+- Whether the included code is copied unchanged, modified, adapted, or used as
+  a basis for new code
+
+Recommended README wording:
+
+    This project includes code from ComfyUI-BodyRatioMapper by wuwukasi
+    (wuwukaka), originally published at:
+    https://github.com/wuwukaka/ComfyUI-BodyRatioMapper
+    The included code is licensed under GNU GPL v3.0.
+
+If the code was changed, the README must also include a modification statement.
+
+3. Modified versions must be marked clearly and specifically.
+
+If any ComfyUI-BodyRatioMapper code is modified, adapted, refactored,
+translated, renamed, reorganized, or used as the basis for another
+implementation, the modified project must include a clear modification
+statement in its README, documentation, source-file headers, or another
+prominent place that travels with the distributed code.
+
+The modification statement must be specific. It must include:
+
+- The date or date range of the modifications
+- The person, organization, or project that made the modifications
+- The files, modules, classes, functions, nodes, or features that were changed
+- A concrete description of what was changed
+- A statement that the modified version is different from the original
+  ComfyUI-BodyRatioMapper code
+
+Recommended modification statement template:
+
+    Modified from ComfyUI-BodyRatioMapper by wuwukasi (wuwukaka).
+    Modification date(s): [YYYY-MM-DD or date range].
+    Modified by: [name / organization / project].
+    Modified files or components: [list exact files, nodes, classes, or
+    functions].
+    Summary of modifications: [describe the actual changes in detail].
+    This modified version is different from the original
+    ComfyUI-BodyRatioMapper project.
+
+Vague or incomplete statements are not sufficient. Examples that are not
+acceptable:
+
+- "Based on open source code."
+- "Uses some GPL code."
+- "Modified from another ComfyUI node."
+- "Inspired by BodyRatioMapper."
+- "Some code comes from the internet."
+
+4. Do not imply endorsement.
+
+Attribution must not state or imply that wuwukasi (wuwukaka) endorses, reviews,
+supports, maintains, or is responsible for modified versions or downstream
+projects unless that permission is given separately in writing.
+
+5. Third-party code attribution remains required.
+
+This project also acknowledges code derived from grmchn/ComfyUI-ProportionChanger
+for the "pose_keypoint input" and "pose_keypoint preview" parts. Downstream
+projects must not remove or obscure that upstream attribution. This NOTICE does
+not transfer ownership of third-party code to wuwukasi (wuwukaka).
+
+6. License continuity.
+
+These notice requirements are in addition to, and must be read together with,
+the GNU GPL v3.0 license text included in the LICENSE file. Nothing in this
+NOTICE removes rights granted under GPLv3 or permits relicensing this code under
+terms that are incompatible with GPLv3.

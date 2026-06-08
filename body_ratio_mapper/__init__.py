@@ -1,3 +1,6 @@
+# Copyright (C) 2026 wuwukasi (wuwukaka)
+# SPDX-License-Identifier: GPL-3.0-only
+
 """
 BodyRatioMapper nodes package
 Provides organized node classes for pose rendering and transformation

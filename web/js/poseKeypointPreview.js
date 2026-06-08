@@ -1,3 +1,7 @@
+// Derived from grmchn/ComfyUI-ProportionChanger's pose_keypoint preview code.
+// See README.md for attribution.
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { app } from "../../../scripts/app.js";
 import { ComfyWidgets } from "../../../scripts/widgets.js";
 

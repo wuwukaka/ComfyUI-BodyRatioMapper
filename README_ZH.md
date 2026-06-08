@@ -188,5 +188,6 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 
 因部分代码来源于 GPL v3.0 项目 `ComfyUI-ProportionChanger`，因此本项目也采用 **GPL v3.0** 协议发布。  
 
+分发、发布或修改本项目代码时，必须保留版权声明，并遵守 [NOTICE](./NOTICE) 中关于来源署名和修改声明的要求。
 
 

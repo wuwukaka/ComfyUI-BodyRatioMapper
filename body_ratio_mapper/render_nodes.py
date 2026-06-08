@@ -1,3 +1,6 @@
+# Copyright (C) 2026 wuwukasi (wuwukaka)
+# SPDX-License-Identifier: GPL-3.0-only
+
 """
 BodyRatioMapper render node classes
 Contains nodes for rendering POSE_KEYPOINT data using SDPose styling

@@ -1,3 +1,10 @@
+# Portions outside the derived utility-node section:
+# Copyright (C) 2026 wuwukasi (wuwukaka)
+# SPDX-License-Identifier: GPL-3.0-only
+#
+# The utility nodes marked below are derived from
+# grmchn/ComfyUI-ProportionChanger as disclosed in README.md.
+
 """
 BodyRatioMapper nodes - Main entry point
 Backward compatibility maintained for existing workflows
@@ -17,6 +24,15 @@ from .body_ratio_mapper import (
     BodyRatioMapperSDPoseInterpolate,
 )
 
+
+# ---------------------------------------------------------------------------
+# Derived utility-node section.
+#
+# The following two utility nodes correspond to the README.md acknowledgement:
+# "pose_keypoint input" and "pose_keypoint preview" are derived from
+# grmchn/ComfyUI-ProportionChanger. No project-owner copyright is asserted here
+# for the original upstream portions.
+# ---------------------------------------------------------------------------
 
 class PoseJSONToPoseKeypoint:
     """
@@ -160,6 +176,10 @@ class PoseKeypointPreview:
             
             return {"ui": {"text": (text,)}, "result": (text,)}
 
+
+# ---------------------------------------------------------------------------
+# End derived utility-node section.
+# ---------------------------------------------------------------------------
 
 NODE_CLASS_MAPPINGS = {
     # Main nodes

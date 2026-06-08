@@ -187,6 +187,7 @@ If you find this project useful, consider buying me a coffee! Your support is my
 
 Since part of the code is derived from the GPL v3.0 project `ComfyUI-ProportionChanger`, this project is also released under **GPL v3.0**.
 
+When redistributing, publishing, or modifying this project's code, you must preserve the copyright notices and follow the attribution and modification-marking requirements in [NOTICE](./NOTICE).
 
 
 
