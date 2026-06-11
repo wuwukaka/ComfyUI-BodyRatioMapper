@@ -133,8 +133,10 @@ class BodyRatioMapperSDPoseBoneScale:
 
         pose = self._triplets(person.get("pose_keypoints_2d", []), 18)
         face = self._triplets(person.get("face_keypoints_2d", []), 68)
-        hand_l = person.get("hand_left_keypoints_2d", [])
-        hand_r = person.get("hand_right_keypoints_2d", [])
+        # Keep this project's upstream key convention:
+        # real-left -> hand_right_keypoints_2d, real-right -> hand_left_keypoints_2d.
+        hand_r = person.get("hand_left_keypoints_2d", [])
+        hand_l = person.get("hand_right_keypoints_2d", [])
         foot = person.get("foot_keypoints_2d", [])
 
         # Snapshot original XY for vector computation
@@ -244,7 +246,10 @@ class BodyRatioMapperSDPoseBoneScale:
         self._scale_foot_points(pose, foot, _R_ANKLE, 3, 5, s_foot)  # right foot: indices 3,4,5
         self._scale_foot_points(pose, foot, _L_ANKLE, 0, 2, s_foot)  # left foot:  indices 0,1,2
 
-        # ---- Step 11: HAND (internal, anchored at wrist) ----
+        # ---- Step 11: HAND (bind to wrist, then internal scale around wrist) ----
+        if any(s != 1.0 for s in (s_sh_w, s_ua, s_la, s_hand)):
+            self._bind_hand_to_wrist(hand_r, pose, _R_WRIST)
+            self._bind_hand_to_wrist(hand_l, pose, _L_WRIST)
         self._scale_hand_points(hand_r, pose, _R_WRIST, s_hand)  # right hand: 21 points
         self._scale_hand_points(hand_l, pose, _L_WRIST, s_hand)  # left hand:  21 points
 
@@ -307,6 +312,20 @@ class BodyRatioMapperSDPoseBoneScale:
             if abs(hand_flat[idx]) > 1e-3 or abs(hand_flat[idx + 1]) > 1e-3:
                 hand_flat[idx] = wx + (hand_flat[idx] - wx) * scale
                 hand_flat[idx + 1] = wy + (hand_flat[idx + 1] - wy) * scale
+
+    def _bind_hand_to_wrist(self, hand_flat, pose, wrist_idx):
+        """Translate the whole hand so hand point 0 stays attached to body wrist."""
+        if not isinstance(hand_flat, list) or not self._is_valid(pose[wrist_idx]):
+            return
+        if len(hand_flat) < 2:
+            return
+        if abs(hand_flat[0]) <= 1e-3 and abs(hand_flat[1]) <= 1e-3:
+            return
+
+        wx, wy = pose[wrist_idx][0], pose[wrist_idx][1]
+        dx = wx - hand_flat[0]
+        dy = wy - hand_flat[1]
+        self._translate_flat(hand_flat, 21, dx, dy)
 
     # ------------------------------------------------------------------
     # Translation helpers
