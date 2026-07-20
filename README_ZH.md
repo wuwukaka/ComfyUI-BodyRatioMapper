@@ -23,6 +23,15 @@
 - 关键点整体位移（SDPose Translate 节点）
 - 匹配原视频首帧耳朵大小模式（match_original_ear_scale）
 
+## RunningHub 在线运行示例
+
+RunningHub 是一个在线 ComfyUI 算力平台。如果你的本地配置无法运行 AI 模型，可以在 RunningHub 上免费运行下方工作流；点击链接注册可领取 1000 积分。
+
+| 超强姿势对齐BodyRatioMapper 解决Q版人物一致性问题 |
+|---|
+| <a href="https://www.runninghub.ai/zh-cn/post/2073345729814609920/?inviteCode=rh-v1565"><img src="docs/images/image_005.jpg" width="360" alt="超强姿势对齐BodyRatioMapper 解决Q版人物一致性问题"></a> |
+| https://www.runninghub.ai/zh-cn/post/2073345729814609920/?inviteCode=rh-v1565 |
+
 ## 效果展示
 
 ### 单图示例
@@ -189,5 +198,4 @@ https://github.com/grmchn/ComfyUI-ProportionChanger
 因部分代码来源于 GPL v3.0 项目 `ComfyUI-ProportionChanger`，因此本项目也采用 **GPL v3.0** 协议发布。  
 
 分发、发布或修改本项目代码时，必须保留版权声明，并遵守 [NOTICE](./NOTICE) 中关于来源署名和修改声明的要求。
-
 

@@ -23,6 +23,15 @@ Typical use cases:
 - Global keypoint translation (SDPose Translate node)
 - Match-original-ear-scale mode for consistent ear width output
 
+## RunningHub Online Workflow Example
+
+RunningHub is an online ComfyUI compute platform. If your local hardware cannot run AI models, you can run the workflow below for free on RunningHub; register through the link to receive 1000 credits.
+
+| Super posture alignment BodyRatioMapper solves the consistency problem of chibi characters |
+|---|
+| <a href="https://www.runninghub.ai/post/2073345729814609920/?inviteCode=rh-v1565"><img src="docs/images/image_006.jpg" width="360" alt="Super posture alignment BodyRatioMapper solves the consistency problem of chibi characters"></a> |
+| https://www.runninghub.ai/post/2073345729814609920/?inviteCode=rh-v1565 |
+
 ## Results
 
 ### Single-Image Examples
@@ -188,7 +197,6 @@ If you find this project useful, consider buying me a coffee! Your support is my
 Since part of the code is derived from the GPL v3.0 project `ComfyUI-ProportionChanger`, this project is also released under **GPL v3.0**.
 
 When redistributing, publishing, or modifying this project's code, you must preserve the copyright notices and follow the attribution and modification-marking requirements in [NOTICE](./NOTICE).
-
 
 
 
